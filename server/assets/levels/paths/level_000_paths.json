@@ -1,0 +1,229 @@
+{
+  "pathGroups": [
+    {
+      "id": "__main__",
+      "name": "Main",
+      "collapsed": false
+    }
+  ],
+  "paths": [
+    {
+      "id": "path_1",
+      "name": "Moving Wall 0",
+      "points": [
+        {
+          "x": 335,
+          "y": 126
+        },
+        {
+          "x": 297,
+          "y": 145
+        },
+        {
+          "x": 256,
+          "y": 150
+        },
+        {
+          "x": 170,
+          "y": 137
+        },
+        {
+          "x": 138,
+          "y": 150
+        },
+        {
+          "x": 71,
+          "y": 289
+        }
+      ],
+      "color": "pink",
+      "groupId": "__main__"
+    },
+    {
+      "id": "path_2",
+      "name": "Moving Wall 1",
+      "points": [
+        {
+          "x": 545,
+          "y": 447
+        },
+        {
+          "x": 658,
+          "y": 349
+        },
+        {
+          "x": 694,
+          "y": 334
+        },
+        {
+          "x": 817,
+          "y": 353
+        },
+        {
+          "x": 857,
+          "y": 334
+        },
+        {
+          "x": 897,
+          "y": 243
+        }
+      ],
+      "color": "orange",
+      "groupId": "__main__"
+    },
+    {
+      "id": "path_4",
+      "name": "Moving Wall 2",
+      "points": [
+        {
+          "x": 695,
+          "y": 100
+        },
+        {
+          "x": 827,
+          "y": 178
+        },
+        {
+          "x": 813,
+          "y": 207
+        },
+        {
+          "x": 644,
+          "y": 185
+        },
+        {
+          "x": 465,
+          "y": 211
+        },
+        {
+          "x": 440,
+          "y": 175
+        },
+        {
+          "x": 454,
+          "y": 118
+        }
+      ],
+      "color": "blue",
+      "groupId": "__main__"
+    },
+    {
+      "id": "path_3",
+      "name": "Moving Wall 3",
+      "points": [
+        {
+          "x": 85,
+          "y": 417
+        },
+        {
+          "x": 200,
+          "y": 299
+        },
+        {
+          "x": 236,
+          "y": 282
+        },
+        {
+          "x": 401,
+          "y": 267
+        },
+        {
+          "x": 412,
+          "y": 300
+        },
+        {
+          "x": 408,
+          "y": 345
+        },
+        {
+          "x": 310,
+          "y": 457
+        }
+      ],
+      "color": "teal",
+      "groupId": "__main__"
+    }
+  ],
+  "pathBindings": [
+    {
+      "id": "path_binding_1",
+      "pathId": "path_1",
+      "targetType": "layer",
+      "targetIndex": 0,
+      "behavior": "ping_pong",
+      "enabled": true,
+      "relativeToInitialPosition": true,
+      "durationMs": 15000
+    },
+    {
+      "id": "path_binding_2",
+      "pathId": "path_1",
+      "targetType": "zone",
+      "targetIndex": 4,
+      "behavior": "ping_pong",
+      "enabled": true,
+      "relativeToInitialPosition": true,
+      "durationMs": 15000
+    },
+    {
+      "id": "path_binding_3",
+      "pathId": "path_2",
+      "targetType": "layer",
+      "targetIndex": 1,
+      "behavior": "ping_pong",
+      "enabled": true,
+      "relativeToInitialPosition": true,
+      "durationMs": 15000
+    },
+    {
+      "id": "path_binding_4",
+      "pathId": "path_2",
+      "targetType": "zone",
+      "targetIndex": 5,
+      "behavior": "ping_pong",
+      "enabled": true,
+      "relativeToInitialPosition": true,
+      "durationMs": 15000
+    },
+    {
+      "id": "path_binding_7",
+      "pathId": "path_4",
+      "targetType": "layer",
+      "targetIndex": 2,
+      "behavior": "ping_pong",
+      "enabled": true,
+      "relativeToInitialPosition": true,
+      "durationMs": 15000
+    },
+    {
+      "id": "path_binding_8",
+      "pathId": "path_4",
+      "targetType": "zone",
+      "targetIndex": 7,
+      "behavior": "ping_pong",
+      "enabled": true,
+      "relativeToInitialPosition": true,
+      "durationMs": 15000
+    },
+    {
+      "id": "path_binding_5",
+      "pathId": "path_3",
+      "targetType": "layer",
+      "targetIndex": 3,
+      "behavior": "ping_pong",
+      "enabled": true,
+      "relativeToInitialPosition": true,
+      "durationMs": 15000
+    },
+    {
+      "id": "path_binding_6",
+      "pathId": "path_3",
+      "targetType": "zone",
+      "targetIndex": 6,
+      "behavior": "ping_pong",
+      "enabled": true,
+      "relativeToInitialPosition": true,
+      "durationMs": 15000
+    }
+  ]
+}

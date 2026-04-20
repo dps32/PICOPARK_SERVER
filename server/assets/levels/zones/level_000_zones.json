@@ -1,0 +1,389 @@
+{
+  "zoneGroups": [
+    {
+      "id": "__main__",
+      "name": "Main",
+      "collapsed": false
+    },
+    {
+      "id": "__group_1772789785523127_1",
+      "name": "Walls Moving",
+      "collapsed": true
+    },
+    {
+      "id": "__group_1772789822957753_2",
+      "name": "Ice",
+      "collapsed": true
+    },
+    {
+      "id": "__group_1772789827189273_3",
+      "name": "Sand",
+      "collapsed": true
+    }
+  ],
+  "zones": [
+    {
+      "name": "Wall Top",
+      "type": "Wall",
+      "gameplayData": "",
+      "x": 0,
+      "y": 0,
+      "width": 1024,
+      "height": 15,
+      "color": "red",
+      "groupId": "__main__"
+    },
+    {
+      "name": "Wall Bottom",
+      "type": "Wall",
+      "gameplayData": "",
+      "x": 0,
+      "y": 505,
+      "width": 1024,
+      "height": 7,
+      "color": "red",
+      "groupId": "__main__"
+    },
+    {
+      "name": "Wall Right",
+      "type": "Wall",
+      "gameplayData": "",
+      "x": 1014,
+      "y": 0,
+      "width": 10,
+      "height": 512,
+      "color": "red",
+      "groupId": "__main__"
+    },
+    {
+      "name": "Wall Left",
+      "type": "Wall",
+      "gameplayData": "",
+      "x": 1,
+      "y": 0,
+      "width": 10,
+      "height": 512,
+      "color": "red",
+      "groupId": "__main__"
+    },
+    {
+      "name": "Moving Wall 0",
+      "type": "Wall",
+      "gameplayData": "",
+      "x": 328,
+      "y": 91,
+      "width": 17,
+      "height": 64,
+      "color": "red",
+      "groupId": "__group_1772789785523127_1"
+    },
+    {
+      "name": "Moving Wall 1",
+      "type": "Wall",
+      "gameplayData": "",
+      "x": 536,
+      "y": 412,
+      "width": 17,
+      "height": 64,
+      "color": "red",
+      "groupId": "__group_1772789785523127_1"
+    },
+    {
+      "name": "Moving Wall 2",
+      "type": "Wall",
+      "gameplayData": "",
+      "x": 57,
+      "y": 411,
+      "width": 63,
+      "height": 17,
+      "color": "red",
+      "groupId": "__group_1772789785523127_1"
+    },
+    {
+      "name": "Moving Wall 3",
+      "type": "Wall",
+      "gameplayData": "",
+      "x": 665,
+      "y": 91,
+      "width": 63,
+      "height": 17,
+      "color": "red",
+      "groupId": "__group_1772789785523127_1"
+    },
+    {
+      "name": "Ice",
+      "type": "Ice",
+      "gameplayData": "",
+      "x": 228,
+      "y": 373,
+      "width": 57,
+      "height": 40,
+      "color": "cyan",
+      "groupId": "__group_1772789822957753_2"
+    },
+    {
+      "name": "Ice",
+      "type": "Ice",
+      "gameplayData": "",
+      "x": 244,
+      "y": 389,
+      "width": 56,
+      "height": 39,
+      "color": "cyan",
+      "groupId": "__group_1772789822957753_2"
+    },
+    {
+      "name": "Ice",
+      "type": "Ice",
+      "gameplayData": "",
+      "x": 468,
+      "y": 292,
+      "width": 344,
+      "height": 104,
+      "color": "cyan",
+      "groupId": "__group_1772789822957753_2"
+    },
+    {
+      "name": "Ice",
+      "type": "Ice",
+      "gameplayData": "",
+      "x": 596,
+      "y": 261,
+      "width": 201,
+      "height": 32,
+      "color": "cyan",
+      "groupId": "__group_1772789822957753_2"
+    },
+    {
+      "name": "Ice",
+      "type": "Ice",
+      "gameplayData": "",
+      "x": 643,
+      "y": 244,
+      "width": 139,
+      "height": 18,
+      "color": "cyan",
+      "groupId": "__group_1772789822957753_2"
+    },
+    {
+      "name": "Ice",
+      "type": "Ice",
+      "gameplayData": "",
+      "x": 483,
+      "y": 396,
+      "width": 312,
+      "height": 18,
+      "color": "cyan",
+      "groupId": "__group_1772789822957753_2"
+    },
+    {
+      "name": "Ice",
+      "type": "Ice",
+      "gameplayData": "",
+      "x": 501,
+      "y": 413,
+      "width": 264,
+      "height": 20,
+      "color": "cyan",
+      "groupId": "__group_1772789822957753_2"
+    },
+    {
+      "name": "Ice",
+      "type": "Ice",
+      "gameplayData": "",
+      "x": 531,
+      "y": 432,
+      "width": 216,
+      "height": 13,
+      "color": "cyan",
+      "groupId": "__group_1772789822957753_2"
+    },
+    {
+      "name": "Ice",
+      "type": "Ice",
+      "gameplayData": "",
+      "x": 563,
+      "y": 445,
+      "width": 121,
+      "height": 17,
+      "color": "cyan",
+      "groupId": "__group_1772789822957753_2"
+    },
+    {
+      "name": "Ice",
+      "type": "Ice",
+      "gameplayData": "",
+      "x": 596,
+      "y": 462,
+      "width": 57,
+      "height": 14,
+      "color": "cyan",
+      "groupId": "__group_1772789822957753_2"
+    },
+    {
+      "name": "Ice",
+      "type": "Ice",
+      "gameplayData": "",
+      "x": 579,
+      "y": 277,
+      "width": 17,
+      "height": 16,
+      "color": "cyan",
+      "groupId": "__group_1772789822957753_2"
+    },
+    {
+      "name": "Sand",
+      "type": "Sand",
+      "gameplayData": "",
+      "x": 161,
+      "y": 33,
+      "width": 14,
+      "height": 14,
+      "color": "orange",
+      "groupId": "__group_1772789827189273_3"
+    },
+    {
+      "name": "Sand",
+      "type": "Sand",
+      "gameplayData": "",
+      "x": 146,
+      "y": 66,
+      "width": 60,
+      "height": 76,
+      "color": "orange",
+      "groupId": "__group_1772789827189273_3"
+    },
+    {
+      "name": "Sand",
+      "type": "Sand",
+      "gameplayData": "",
+      "x": 162,
+      "y": 128,
+      "width": 109,
+      "height": 189,
+      "color": "orange",
+      "groupId": "__group_1772789827189273_3"
+    },
+    {
+      "name": "Sand",
+      "type": "Sand",
+      "gameplayData": "",
+      "x": 206,
+      "y": 113,
+      "width": 17,
+      "height": 19,
+      "color": "orange",
+      "groupId": "__group_1772789827189273_3"
+    },
+    {
+      "name": "Sand",
+      "type": "Sand",
+      "gameplayData": "",
+      "x": 131,
+      "y": 162,
+      "width": 31,
+      "height": 203,
+      "color": "orange",
+      "groupId": "__group_1772789827189273_3"
+    },
+    {
+      "name": "Sand",
+      "type": "Sand",
+      "gameplayData": "",
+      "x": 116,
+      "y": 228,
+      "width": 16,
+      "height": 136,
+      "color": "orange",
+      "groupId": "__group_1772789827189273_3"
+    },
+    {
+      "name": "Sand",
+      "type": "Sand",
+      "gameplayData": "",
+      "x": 271,
+      "y": 260,
+      "width": 45,
+      "height": 57,
+      "color": "orange",
+      "groupId": "__group_1772789827189273_3"
+    },
+    {
+      "name": "Sand",
+      "type": "Sand",
+      "gameplayData": "",
+      "x": 162,
+      "y": 317,
+      "width": 27,
+      "height": 18,
+      "color": "orange",
+      "groupId": "__group_1772789827189273_3"
+    },
+    {
+      "name": "Sand",
+      "type": "Sand",
+      "gameplayData": "",
+      "x": 161,
+      "y": 335,
+      "width": 12,
+      "height": 28,
+      "color": "orange",
+      "groupId": "__group_1772789827189273_3"
+    },
+    {
+      "name": "Sand",
+      "type": "Sand",
+      "gameplayData": "",
+      "x": 500,
+      "y": 68,
+      "width": 183,
+      "height": 121,
+      "color": "orange",
+      "groupId": "__group_1772789827189273_3"
+    },
+    {
+      "name": "Sand",
+      "type": "Sand",
+      "gameplayData": "",
+      "x": 515,
+      "y": 52,
+      "width": 153,
+      "height": 16,
+      "color": "orange",
+      "groupId": "__group_1772789827189273_3"
+    },
+    {
+      "name": "Sand",
+      "type": "Sand",
+      "gameplayData": "",
+      "x": 564,
+      "y": 35,
+      "width": 72,
+      "height": 17,
+      "color": "orange",
+      "groupId": "__group_1772789827189273_3"
+    },
+    {
+      "name": "Sand",
+      "type": "Sand",
+      "gameplayData": "",
+      "x": 683,
+      "y": 83,
+      "width": 16,
+      "height": 89,
+      "color": "orange",
+      "groupId": "__group_1772789827189273_3"
+    },
+    {
+      "name": "Sand",
+      "type": "Sand",
+      "gameplayData": "",
+      "x": 513,
+      "y": 189,
+      "width": 122,
+      "height": 16,
+      "color": "orange",
+      "groupId": "__group_1772789827189273_3"
+    }
+  ]
+}
