@@ -8,7 +8,8 @@ cleanup() {
 trap cleanup EXIT
 
 ORIGINAL_DIR=$(pwd)
-source ./config.env
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/config.env"
 
 FILE_TO_SEND="${1:-}"
 USER=${2:-$DEFAULT_USER}

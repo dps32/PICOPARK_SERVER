@@ -8,7 +8,8 @@ cleanup() {
 trap cleanup EXIT
 
 ORIGINAL_DIR=$(pwd)
-source ./config.env
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/config.env"
 
 USER=${1:-$DEFAULT_USER}
 RSA_PATH=${2:-"$DEFAULT_RSA_PATH"}
@@ -24,10 +25,11 @@ if [[ ! -f "$RSA_PATH" ]]; then
   exit 1
 fi
 
-bash ../buildFlutterWeb.sh
+PARENT_DIR="$(dirname "$SCRIPT_DIR")"
+bash "$PARENT_DIR/buildFlutterWeb.sh"
 
-cd ..
-./getAssets.sh
+cd "$PARENT_DIR"
+bash ./getAssets.sh
 rm -f "$ZIP_NAME"
 zip -r "$ZIP_NAME" . -x "proxmox/*" "node_modules/*" "data" "data/*" ".gitignore"
 

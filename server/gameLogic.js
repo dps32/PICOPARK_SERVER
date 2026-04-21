@@ -2,8 +2,7 @@
 
 const { loadMultiplayerLevel } = require('./multiplayerLevelData.js');
 
-// Lobby countdown length before the server switches the match from waiting to playing.
-const WAITING_DURATION_MS = 60 * 1000;
+const MIN_PLAYERS_TO_START = 2;
 // Safety fallback for dt calculation if the measured loop FPS is temporarily unavailable or zero.
 const TARGET_FPS_FALLBACK = 60;
 const PLAYER_WIDTH = 20;
@@ -15,13 +14,12 @@ const PLAYER_START_STEP_Y = 32;
 const GEM_WIDTH = 15;
 const GEM_HEIGHT = 15;
 
-const MOVE_SPEED_PER_SECOND = 95;
-const DIAGONAL_NORMALIZE = 0.70710677;
-const NORMAL_ACCELERATION_PER_SECOND = 900;
-const NORMAL_DECELERATION_PER_SECOND = 1200;
-const ICE_ACCELERATION_PER_SECOND = 230;
-const ICE_DECELERATION_PER_SECOND = 75;
-const SAND_SPEED_MULTIPLIER = 0.48;
+const MOVE_SPEED_PER_SECOND = 180;
+const ACCELERATION_PER_SECOND = 1200;
+const DECELERATION_PER_SECOND = 800;
+const JUMP_IMPULSE = 320;
+const GRAVITY_PER_SECOND = 1000;
+const MAX_FALL_SPEED = 500;
 const MOVEMENT_DIRECTION_THRESHOLD = 2;
 const VELOCITY_STOP_THRESHOLD = 0.5;
 const MAX_COLLISION_SLIDE_ITERATIONS = 4;
@@ -30,45 +28,22 @@ const COLLISION_TIME_BACKOFF = 0.001;
 const COLLISION_PROBE_SPACING = 1.0;
 const MOVEMENT_EPSILON = 0.0001;
 
-const GEM_COUNTS = {
-    blue: 500,
-    green: 250,
-    yellow: 100,
-    purple: 50
-};
-const GEM_VALUES = {
-    blue: 1,
-    green: 2,
-    yellow: 3,
-    purple: 5
-};
-
 const DIRECTIONS = {
-    up: { dx: 0, dy: -1, facing: 'up' },
-    upLeft: { dx: -DIAGONAL_NORMALIZE, dy: -DIAGONAL_NORMALIZE, facing: 'upLeft' },
-    left: { dx: -1, dy: 0, facing: 'left' },
-    downLeft: { dx: -DIAGONAL_NORMALIZE, dy: DIAGONAL_NORMALIZE, facing: 'downLeft' },
-    down: { dx: 0, dy: 1, facing: 'down' },
-    downRight: { dx: DIAGONAL_NORMALIZE, dy: DIAGONAL_NORMALIZE, facing: 'downRight' },
-    right: { dx: 1, dy: 0, facing: 'right' },
-    upRight: { dx: DIAGONAL_NORMALIZE, dy: -DIAGONAL_NORMALIZE, facing: 'upRight' },
-    none: { dx: 0, dy: 0, facing: 'down' }
+    left: { dx: -1, facing: 'left' },
+    right: { dx: 1, facing: 'right' },
+    none: { dx: 0, facing: 'right' }
 };
 
 const LEVEL = loadMultiplayerLevel();
 const PLAYER_TEMPLATE = findPlayerTemplate(LEVEL.sprites);
-const GEM_TEMPLATE_BY_TYPE = buildGemTemplateMap(LEVEL.sprites);
 
 class GameLogic {
     constructor() {
         this.players = new Map();
         this.tickCounter = 0;
         this.nextJoinOrder = 0;
-        this.nextGemId = 0;
         this.phase = 'waiting';
         this.lobbyEndsAt = null;
-        this.winnerId = '';
-        this.gems = [];
         this.initialStateDirty = true;
 
         this.layerRuntimeStates = LEVEL.layers.map((layer) => ({
@@ -113,9 +88,7 @@ class GameLogic {
             })
             .filter(Boolean);
 
-        this.wallZoneIndices = classifyZoneIndices(['mur', 'wall'], LEVEL.zones);
-        this.iceZoneIndices = classifyZoneIndices(['ice', 'gel', 'hielo'], LEVEL.zones);
-        this.sandZoneIndices = classifyZoneIndices(['sand', 'sorra', 'arena'], LEVEL.zones);
+        this.wallZoneIndices = classifyZoneIndices(['wall', 'ground'], LEVEL.zones);
     }
 
     addClient(id) {
@@ -128,13 +101,12 @@ class GameLogic {
             width: PLAYER_WIDTH,
             height: PLAYER_HEIGHT,
             direction: 'none',
-            facing: 'down',
+            facing: 'right',
             moving: false,
             joinOrder: this.nextJoinOrder++,
-            score: 0,
-            gemsCollected: 0,
             velocityX: 0,
             velocityY: 0,
+            onGround: true,
             animationId: PLAYER_TEMPLATE ? PLAYER_TEMPLATE.animationId : '',
             frameIndex: PLAYER_TEMPLATE ? resolveClipStartFrame(PLAYER_TEMPLATE.animationId) : 0,
             flipX: false,
@@ -185,14 +157,29 @@ class GameLogic {
                 }
                 break;
             case 'direction':
-                player.direction = normalizeDirection(obj.value);
+                player.direction = normalizePlatformerDirection(obj.value);
                 if (player.direction !== 'none') {
                     player.facing = DIRECTIONS[player.direction].facing;
+                }
+                break;
+            case 'jump':
+                if (player.onGround) {
+                    player.velocityY = -JUMP_IMPULSE;
+                    player.onGround = false;
+                    player.animationId = resolvePlatformerAnimationId(player.facing, false, true, false);
+                    player.frameIndex = resolveClipStartFrame(player.animationId);
+                    return true;
                 }
                 break;
             case 'restartMatch':
                 if (this.phase === 'finished') {
                     this.restartToWaitingRoom();
+                    return true;
+                }
+                break;
+            case 'startMatch':
+                if (this.phase === 'waiting' && this.players.size >= MIN_PLAYERS_TO_START) {
+                    this.startMatch();
                     return true;
                 }
                 break;
@@ -216,12 +203,6 @@ class GameLogic {
         this.advanceEnvironment(dtSeconds);
 
         if (this.phase === 'waiting') {
-            if (this.lobbyEndsAt == null) {
-                this.startWaitingRoom();
-            }
-            if (this.lobbyEndsAt != null && Date.now() >= this.lobbyEndsAt) {
-                this.startMatch();
-            }
             return;
         }
 
@@ -234,54 +215,43 @@ class GameLogic {
             this.resolveWallPenetration(player);
 
             const direction = DIRECTIONS[player.direction] || DIRECTIONS.none;
-            const onIce = this.playerOverlapsAnyZone(player, this.iceZoneIndices);
-            const onSand = this.playerOverlapsAnyZone(player, this.sandZoneIndices);
-            const speedMultiplier = onSand ? SAND_SPEED_MULTIPLIER : 1;
-            const targetVelocityX = direction.dx * MOVE_SPEED_PER_SECOND * speedMultiplier;
-            const targetVelocityY = direction.dy * MOVE_SPEED_PER_SECOND * speedMultiplier;
+            const targetVelocityX = direction.dx * MOVE_SPEED_PER_SECOND;
             const hasInput = player.direction !== 'none';
-            const acceleration = onIce
-                ? ICE_ACCELERATION_PER_SECOND
-                : NORMAL_ACCELERATION_PER_SECOND;
-            const deceleration = onIce
-                ? ICE_DECELERATION_PER_SECOND
-                : NORMAL_DECELERATION_PER_SECOND;
+            const acceleration = ACCELERATION_PER_SECOND;
+            const deceleration = DECELERATION_PER_SECOND;
             const maxVelocityDelta = (hasInput ? acceleration : deceleration) * dtSeconds;
 
             player.velocityX = approach(player.velocityX, targetVelocityX, maxVelocityDelta);
-            player.velocityY = approach(player.velocityY, targetVelocityY, maxVelocityDelta);
             if (Math.abs(player.velocityX) < VELOCITY_STOP_THRESHOLD) {
                 player.velocityX = 0;
             }
-            if (Math.abs(player.velocityY) < VELOCITY_STOP_THRESHOLD) {
-                player.velocityY = 0;
-            }
+
+            player.velocityY = Math.min(player.velocityY + GRAVITY_PER_SECOND * dtSeconds, MAX_FALL_SPEED);
 
             const movingLeft = player.velocityX < -MOVEMENT_DIRECTION_THRESHOLD;
             const movingRight = player.velocityX > MOVEMENT_DIRECTION_THRESHOLD;
-            const movingUp = player.velocityY < -MOVEMENT_DIRECTION_THRESHOLD;
-            const movingDown = player.velocityY > MOVEMENT_DIRECTION_THRESHOLD;
-            player.facing = resolveFacing(player.facing, movingUp, movingDown, movingLeft, movingRight);
-            player.flipX = shouldFlipX(player.facing);
-            player.animationId = resolvePlayerAnimationId(player.facing, player.moving);
-            player.frameIndex = resolveAnimationFrame(player.animationId, this.tickCounter / safeFps);
+            if (movingLeft) {
+                player.facing = 'left';
+            } else if (movingRight) {
+                player.facing = 'right';
+            }
+
 
             const previousX = player.x;
             const previousY = player.y;
             const dx = player.velocityX * dtSeconds;
             const dy = player.velocityY * dtSeconds;
             this.movePlayerWithWallCollisions(player, previousX, previousY, dx, dy);
-            this.collectTouchedGems(player);
 
-            const hasDirectionalVelocity =
-                Math.abs(player.velocityX) > MOVEMENT_DIRECTION_THRESHOLD ||
-                Math.abs(player.velocityY) > MOVEMENT_DIRECTION_THRESHOLD;
-            player.moving = hasInput && hasDirectionalVelocity;
+            player.moving = hasInput && Math.abs(player.velocityX) > MOVEMENT_DIRECTION_THRESHOLD;
+            player.onGround = this.isPlayerOnGround(player);
+
+            const isJumping = !player.onGround && player.velocityY < -50;
+            const isFalling = !player.onGround && player.velocityY > 50;
+            player.animationId = resolvePlatformerAnimationId(player.facing, player.onGround, isJumping, isFalling);
+            player.frameIndex = resolveAnimationFrame(player.animationId, this.tickCounter / safeFps);
         }
 
-        if (this.gems.every((gem) => !gem.visible)) {
-            this.finishMatch();
-        }
     }
 
     consumeSnapshotState() {
@@ -302,15 +272,6 @@ class GameLogic {
                 width: player.width,
                 height: player.height,
                 joinOrder: player.joinOrder
-            })),
-            gems: this.gems.map((gem) => ({
-                id: gem.id,
-                type: gem.type,
-                x: round2(gem.x),
-                y: round2(gem.y),
-                width: gem.width,
-                height: gem.height,
-                value: gem.value
             }))
         };
     }
@@ -322,7 +283,6 @@ class GameLogic {
             players: players.map((player) => ({
                 ...this.serializeGameplayPlayer(player),
             })),
-            gems: this.getVisibleGems(),
         };
     }
 
@@ -342,7 +302,7 @@ class GameLogic {
                 .map((player) => this.serializeGameplayPlayer(player));
         }
         if (includeGems) {
-            state.gems = this.getVisibleGems();
+            state.gems = [];
         }
 
         return state;
@@ -359,15 +319,14 @@ class GameLogic {
         const countdownSeconds = this.phase === 'waiting' && this.lobbyEndsAt != null
             ? Math.max(0, Math.ceil((this.lobbyEndsAt - Date.now()) / 1000))
             : 0;
-        const winner = this.winnerId ? this.players.get(this.winnerId) : players[0];
 
         return {
             tickCounter: this.tickCounter,
             phase: this.phase,
             countdownSeconds,
-            remainingGems: this.gems.reduce((count, gem) => count + (gem.visible ? 1 : 0), 0),
-            winnerId: winner ? winner.id : '',
-            winnerName: winner ? winner.name : '',
+            remainingGems: 0,
+            winnerId: '',
+            winnerName: '',
             layerTransforms: this.layerRuntimeStates.map((layer, index) => ({
                 index,
                 x: round2(layer.x),
@@ -386,35 +345,19 @@ class GameLogic {
             id: player.id,
             x: round2(player.x),
             y: round2(player.y),
-            score: player.score,
-            gemsCollected: player.gemsCollected,
             direction: player.direction,
             facing: player.facing,
             moving: player.moving,
+            velocityY: round2(player.velocityY),
+            onGround: player.onGround
         };
-    }
-
-    getVisibleGems() {
-        return this.gems
-            .filter((gem) => gem.visible)
-            .map((gem) => ({
-                id: gem.id,
-                type: gem.type,
-                x: round2(gem.x),
-                y: round2(gem.y),
-                width: gem.width,
-                height: gem.height,
-                value: gem.value
-            }));
     }
 
     startWaitingRoom() {
         this.phase = 'waiting';
-        this.winnerId = '';
-        this.lobbyEndsAt = Date.now() + WAITING_DURATION_MS;
+        this.lobbyEndsAt = null;
         this.initialStateDirty = true;
         this.resetEnvironmentRuntime();
-        this.spawnGems();
         this.positionPlayersForStart();
     }
 
@@ -424,12 +367,6 @@ class GameLogic {
         this.lobbyEndsAt = null;
         this.resetEnvironmentRuntime();
         this.positionPlayersForStart();
-    }
-
-    finishMatch() {
-        this.phase = 'finished';
-        const players = Array.from(this.players.values()).sort(comparePlayers);
-        this.winnerId = players.length > 0 ? players[0].id : '';
     }
 
     restartToWaitingRoom() {
@@ -443,9 +380,6 @@ class GameLogic {
     resetMatch() {
         this.phase = 'waiting';
         this.lobbyEndsAt = null;
-        this.winnerId = '';
-        this.gems = [];
-        this.nextGemId = 0;
         this.initialStateDirty = true;
         this.resetEnvironmentRuntime();
     }
@@ -799,60 +733,6 @@ class GameLogic {
         return { x: 0, y: -1 };
     }
 
-    collectTouchedGems(player) {
-        for (const gem of this.gems) {
-            if (!gem.visible) {
-                continue;
-            }
-            if (rectsOverlap(
-                this.playerCollisionRect(player),
-                this.gemCollisionRect(gem)
-            )) {
-                player.score += gem.value;
-                player.gemsCollected += 1;
-                gem.visible = false;
-            }
-        }
-    }
-
-    spawnGems() {
-        this.gems = [];
-        this.nextGemId = 0;
-        this.initialStateDirty = true;
-
-        const shuffledCells = shuffle(LEVEL.gemCells.slice());
-        const spawnQueue = [];
-        Object.entries(GEM_COUNTS).forEach(([type, count]) => {
-            for (let i = 0; i < count; i++) {
-                spawnQueue.push(type);
-            }
-        });
-
-        for (let i = 0; i < spawnQueue.length && i < shuffledCells.length; i++) {
-            const type = spawnQueue[i];
-            const cell = shuffledCells[i];
-            this.gems.push({
-                id: `G${String(this.nextGemId++).padStart(3, '0')}`,
-                type,
-                x: cell.x,
-                y: cell.y,
-                width: GEM_WIDTH,
-                height: GEM_HEIGHT,
-                value: GEM_VALUES[type] || 1,
-                visible: true
-            });
-        }
-    }
-
-    playerOverlapsAnyZone(player, zoneIndices) {
-        for (const zoneIndex of zoneIndices) {
-            if (this.collidesWithZoneAt(player, zoneIndex, player.x, player.y)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     collidesWithZoneAt(player, zoneIndex, x, y) {
         const zoneRect = this.zoneRectAtIndex(zoneIndex);
         for (const hitBoxRect of this.playerHitBoxRectsAt(player, x, y)) {
@@ -915,19 +795,18 @@ class GameLogic {
         );
     }
 
-    gemCollisionRect(gem) {
-        const template = GEM_TEMPLATE_BY_TYPE.get(gem.type);
-        const clip = template ? LEVEL.animationClips.get(template.animationId) : null;
-        const frameIndex = resolveAnimationFrame(template ? template.animationId : '', this.tickCounter / TARGET_FPS_FALLBACK);
-        const hitBoxes = activeHitBoxesForClip(clip, frameIndex);
-        if (!hitBoxes || hitBoxes.length <= 0) {
-            return rectAt(gem.x, gem.y, gem.width, gem.height);
+    isPlayerOnGround(player) {
+        const playerRect = this.playerCollisionRect(player);
+        for (const zoneIndex of this.wallZoneIndices) {
+            const zoneRect = this.zoneRectAtIndex(zoneIndex);
+            if (playerRect.bottom >= zoneRect.top && playerRect.bottom <= zoneRect.top + 5 &&
+                playerRect.right > zoneRect.left && playerRect.left < zoneRect.right) {
+                return true;
+            }
         }
-        const rects = hitBoxes.map((hitBox) =>
-            hitBoxRectAt(gem.x, gem.y, gem.width, gem.height, hitBox, false, false)
-        );
-        return unionRects(rects, rectAt(gem.x, gem.y, gem.width, gem.height));
+        return playerRect.bottom >= LEVEL.worldHeight - 1;
     }
+
 }
 
 function createPathRuntime(path) {
@@ -1055,12 +934,6 @@ function resolveFacing(previousFacing, up, down, left, right) {
 }
 
 function comparePlayers(a, b) {
-    if (b.score !== a.score) {
-        return b.score - a.score;
-    }
-    if (b.gemsCollected !== a.gemsCollected) {
-        return b.gemsCollected - a.gemsCollected;
-    }
     return a.joinOrder - b.joinOrder;
 }
 
@@ -1084,23 +957,6 @@ function findPlayerTemplate(sprites) {
     return sprites[0] || null;
 }
 
-function buildGemTemplateMap(sprites) {
-    const map = new Map();
-    for (const sprite of sprites) {
-        const type = normalize(sprite.type);
-        if (type.includes('gem purple')) {
-            map.set('purple', sprite);
-        } else if (type.includes('gem yellow')) {
-            map.set('yellow', sprite);
-        } else if (type.includes('gem green')) {
-            map.set('green', sprite);
-        } else if (type.includes('gem blue')) {
-            map.set('blue', sprite);
-        }
-    }
-    return map;
-}
-
 function resolvePlayerAnimationId(facing, moving) {
     const animationName = resolvePlayerAnimationName(facing, moving);
     for (const clip of LEVEL.animationClips.values()) {
@@ -1111,30 +967,30 @@ function resolvePlayerAnimationId(facing, moving) {
     return PLAYER_TEMPLATE ? PLAYER_TEMPLATE.animationId : '';
 }
 
-function resolvePlayerAnimationName(facing, moving) {
-    switch (facing) {
-    case 'left':
-        return moving ? 'Character  Walk Right' : 'Character Idle Right';
-    case 'upLeft':
-        return moving ? 'Character  Walk Up-Right' : 'Character Idle Up-Right';
-    case 'downLeft':
-        return moving ? 'Character  Walk Down-Right' : 'Character Idle Down-Right';
-    case 'right':
-        return moving ? 'Character  Walk Right' : 'Character Idle Right';
-    case 'upRight':
-        return moving ? 'Character  Walk Up-Right' : 'Character Idle Up-Right';
-    case 'up':
-        return moving ? 'Character  Walk Up' : 'Character Idle Up';
-    case 'downRight':
-        return moving ? 'Character  Walk Down-Right' : 'Character Idle Down-Right';
-    case 'down':
-    default:
-        return moving ? 'Character  Walk Down' : 'Character Idle Down';
+function resolvePlatformerAnimationId(facing, onGround, isJumping, isFalling) {
+    let animationName = '';
+    if (!onGround && isJumping) {
+        animationName = 'Character Jump ' + (facing === 'left' ? 'Left' : 'Right');
+    } else if (!onGround && isFalling) {
+        animationName = 'Character Fall ' + (facing === 'left' ? 'Left' : 'Right');
+    } else if (!onGround) {
+        animationName = 'Character Jump ' + (facing === 'left' ? 'Left' : 'Right');
+    } else {
+        animationName = 'Character Idle ' + (facing === 'left' ? 'Left' : 'Right');
     }
+    for (const clip of LEVEL.animationClips.values()) {
+        if (normalize(clip.name) === normalize(animationName)) {
+            return clip.id;
+        }
+    }
+    return PLAYER_TEMPLATE ? PLAYER_TEMPLATE.animationId : '';
 }
 
-function shouldFlipX(facing) {
-    return facing === 'left' || facing === 'upLeft' || facing === 'downLeft';
+function resolvePlayerAnimationName(facing, moving) {
+    if (facing === 'left') {
+        return moving ? 'Character Walk Left' : 'Character Idle Left';
+    }
+    return moving ? 'Character Walk Right' : 'Character Idle Right';
 }
 
 function resolveAnimationFrame(animationId, elapsedSeconds) {
@@ -1212,11 +1068,16 @@ function positiveMod(value, divisor) {
     return mod < 0 ? mod + divisor : mod;
 }
 
-function normalizeDirection(value) {
+function normalizePlatformerDirection(value) {
     const direction = String(value || '').trim();
-    return Object.prototype.hasOwnProperty.call(DIRECTIONS, direction)
-        ? direction
-        : 'none';
+    if (direction === 'left' || direction === 'right' || direction === 'none') {
+        return direction;
+    }
+    return 'none';
+}
+
+function normalizeDirection(value) {
+    return normalizePlatformerDirection(value);
 }
 
 function rectAt(x, y, width, height) {
@@ -1270,16 +1131,6 @@ function lerp(from, to, alpha) {
 
 function round2(value) {
     return Math.round(value * 100) / 100;
-}
-
-function shuffle(values) {
-    for (let i = values.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        const temp = values[i];
-        values[i] = values[j];
-        values[j] = temp;
-    }
-    return values;
 }
 
 module.exports = GameLogic;

@@ -2,7 +2,8 @@
 
 # Connects to the remote server using SSH
 
-source ./config.env
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/config.env"
 
 USER=${1:-$DEFAULT_USER}
 RSA_PATH=${2:-"$DEFAULT_RSA_PATH"}

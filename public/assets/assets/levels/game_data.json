@@ -8,82 +8,17 @@
       "gameplayData": "",
       "layers": [
         {
-          "name": "Stones 0",
-          "gameplayData": "",
-          "x": 320,
-          "y": 80,
-          "depth": 0.0,
-          "tilesSheetFile": "media/punyworld-overworld-tileset.png",
-          "tilesWidth": 16,
-          "tilesHeight": 16,
-          "visible": true,
-          "groupId": "__main__",
-          "tileMapFile": "tilemaps/level_000_layer_000.json"
-        },
-        {
-          "name": "Stones 1",
-          "gameplayData": "",
-          "x": 528,
-          "y": 400,
-          "depth": 0.0,
-          "tilesSheetFile": "media/punyworld-overworld-tileset.png",
-          "tilesWidth": 16,
-          "tilesHeight": 16,
-          "visible": true,
-          "groupId": "__main__",
-          "tileMapFile": "tilemaps/level_000_layer_001.json"
-        },
-        {
-          "name": "Stones 2",
-          "gameplayData": "",
-          "x": 656,
-          "y": 80,
-          "depth": 0.0,
-          "tilesSheetFile": "media/punyworld-overworld-tileset.png",
-          "tilesWidth": 16,
-          "tilesHeight": 16,
-          "visible": true,
-          "groupId": "__main__",
-          "tileMapFile": "tilemaps/level_000_layer_002.json"
-        },
-        {
-          "name": "Stones 3",
-          "gameplayData": "",
-          "x": 48,
-          "y": 400,
-          "depth": 0.0,
-          "tilesSheetFile": "media/punyworld-overworld-tileset.png",
-          "tilesWidth": 16,
-          "tilesHeight": 16,
-          "visible": true,
-          "groupId": "__main__",
-          "tileMapFile": "tilemaps/level_000_layer_003.json"
-        },
-        {
-          "name": "Gems Zone",
-          "gameplayData": "",
-          "x": 64,
-          "y": 16,
-          "depth": 0.0,
-          "tilesSheetFile": "media/punyworld-overworld-tileset.png",
-          "tilesWidth": 16,
-          "tilesHeight": 16,
-          "visible": true,
-          "groupId": "__main__",
-          "tileMapFile": "tilemaps/level_000_layer_004.json"
-        },
-        {
           "name": "Terrain",
           "gameplayData": "",
           "x": 0,
           "y": 0,
           "depth": 0.0,
-          "tilesSheetFile": "media/punyworld-overworld-tileset.png",
-          "tilesWidth": 16,
-          "tilesHeight": 16,
+          "tilesSheetFile": "media/Proyecto nuevo.png",
+          "tilesWidth": 50,
+          "tilesHeight": 50,
           "visible": true,
           "groupId": "__main__",
-          "tileMapFile": "tilemaps/level_000_layer_005.json"
+          "tileMapFile": "tilemaps/level_000_layer_000.json"
         }
       ],
       "layerGroups": [
@@ -108,66 +43,6 @@
           "flipY": false,
           "depth": 0.0,
           "groupId": "__main__"
-        },
-        {
-          "name": "Gem Purple",
-          "gameplayData": "",
-          "type": "Gem Purple",
-          "animationId": "anim_1772440074459800",
-          "x": 50,
-          "y": 475,
-          "width": 15,
-          "height": 15,
-          "imageFile": "media/gem.png",
-          "flipX": false,
-          "flipY": false,
-          "depth": 0.0,
-          "groupId": "__main__"
-        },
-        {
-          "name": "Gem Yellow",
-          "gameplayData": "",
-          "type": "Gem Yellow",
-          "animationId": "anim_2",
-          "x": 75,
-          "y": 475,
-          "width": 15,
-          "height": 15,
-          "imageFile": "media/gem.png",
-          "flipX": false,
-          "flipY": false,
-          "depth": 0.0,
-          "groupId": "__main__"
-        },
-        {
-          "name": "Gem Green",
-          "gameplayData": "",
-          "type": "Gem Green",
-          "animationId": "anim_1",
-          "x": 100,
-          "y": 475,
-          "width": 15,
-          "height": 15,
-          "imageFile": "media/gem.png",
-          "flipX": false,
-          "flipY": false,
-          "depth": 0.0,
-          "groupId": "__main__"
-        },
-        {
-          "name": "Gem Blue",
-          "gameplayData": "",
-          "type": "Gem Blue",
-          "animationId": "anim_3",
-          "x": 125,
-          "y": 475,
-          "width": 15,
-          "height": 15,
-          "imageFile": "media/gem.png",
-          "flipX": false,
-          "flipY": false,
-          "depth": 0.0,
-          "groupId": "__main__"
         }
       ],
       "spriteGroups": [
@@ -178,10 +53,10 @@
         }
       ],
       "groupId": "__main__",
-      "viewportWidth": 320,
-      "viewportHeight": 180,
-      "viewportX": 280,
-      "viewportY": 175,
+      "viewportWidth": 560,
+      "viewportHeight": 250,
+      "viewportX": 50,
+      "viewportY": 130,
       "viewportAdaptation": "expand",
       "viewportInitialColor": "yellow",
       "viewportPreviewColor": "pink",
@@ -206,6 +81,15 @@
       "tileWidth": 16,
       "tileHeight": 16,
       "selectionColorHex": "#FF2D55",
+      "groupId": "__main__"
+    },
+    {
+      "name": "sandia_suelo",
+      "fileName": "media/Proyecto nuevo.png",
+      "mediaType": "tileset",
+      "tileWidth": 50,
+      "tileHeight": 50,
+      "selectionColorHex": "#FFCC00",
       "groupId": "__main__"
     },
     {
@@ -254,16 +138,8 @@
   ],
   "zoneTypes": [
     {
-      "name": "Wall",
+      "name": "ground",
       "color": "red"
-    },
-    {
-      "name": "Ice",
-      "color": "cyan"
-    },
-    {
-      "name": "Sand",
-      "color": "orange"
     }
   ],
   "animationsFile": "animations/animations.json"

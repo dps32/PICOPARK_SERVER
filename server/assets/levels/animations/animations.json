@@ -8,7 +8,7 @@
     {
       "id": "__group_1772115382813671_1",
       "name": "Character Idle",
-      "collapsed": true
+      "collapsed": false
     },
     {
       "id": "__group_1772115389184027_2",
@@ -1442,6 +1442,43 @@
               "height": 0.56
             }
           ]
+        }
+      ]
+    },
+    {
+      "id": "anim_1776783495181816",
+      "name": "manzana anim",
+      "mediaFile": "media/frutas2.png",
+      "startFrame": 3,
+      "endFrame": 5,
+      "fps": 5.0,
+      "loop": true,
+      "groupId": "__main__",
+      "anchorX": 0.5,
+      "anchorY": 0.5,
+      "anchorColor": "red",
+      "hitBoxes": [],
+      "frameRigs": [
+        {
+          "frame": 3,
+          "anchorX": 0.5,
+          "anchorY": 0.5,
+          "anchorColor": "red",
+          "hitBoxes": []
+        },
+        {
+          "frame": 4,
+          "anchorX": 0.5,
+          "anchorY": 0.5,
+          "anchorColor": "red",
+          "hitBoxes": []
+        },
+        {
+          "frame": 5,
+          "anchorX": 0.5,
+          "anchorY": 0.5,
+          "anchorColor": "red",
+          "hitBoxes": []
         }
       ]
     }
