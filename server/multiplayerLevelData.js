@@ -16,15 +16,22 @@ function loadMultiplayerLevel() {
     const mediaSizes = loadMediaSizes(root.mediaAssets || []);
     const animationClips = loadAnimationClips(animationsRoot.animations || [], mediaSizes);
 
-    const layers = (level.layers || []).map((layer) => ({
-        name: String(layer.name || ''),
-        x: Number(layer.x || 0),
-        y: Number(layer.y || 0),
-        tileWidth: Number(layer.tilesWidth || 16),
-        tileHeight: Number(layer.tilesHeight || 16),
-        tileMapFile: String(layer.tileMapFile || '')
-    }));
-    const zones = (zonesRoot.zones || []).map((zone) => ({
+    const layers = (level.layers || []).map((layer) => {
+        const tileMapFile = String(layer.tileMapFile || '');
+        const tileMap = tileMapFile
+            ? loadJson(path.join(LEVEL_ROOT, tileMapFile)).tileMap || []
+            : [];
+        return {
+            name: String(layer.name || ''),
+            x: Number(layer.x || 0),
+            y: Number(layer.y || 0),
+            tileWidth: Number(layer.tilesWidth || 16),
+            tileHeight: Number(layer.tilesHeight || 16),
+            tileMapFile,
+            tileMap
+        };
+    });
+    const manualZones = (zonesRoot.zones || []).map((zone) => ({
         name: String(zone.name || ''),
         type: String(zone.type || ''),
         gameplayData: String(zone.gameplayData || ''),
@@ -33,6 +40,7 @@ function loadMultiplayerLevel() {
         width: Number(zone.width || 0),
         height: Number(zone.height || 0)
     }));
+    const zones = mergeZones(manualZones, buildAutoCollisionZonesFromLayers(layers));
     const sprites = (level.sprites || []).map((sprite) => ({
         name: String(sprite.name || ''),
         type: String(sprite.type || ''),
@@ -73,9 +81,7 @@ function loadMultiplayerLevel() {
     let worldHeight = Number(level.viewportY || 0) + Number(level.viewportHeight || 180);
 
     for (const layer of layers) {
-        const tileMap = layer.tileMapFile
-            ? loadJson(path.join(LEVEL_ROOT, layer.tileMapFile)).tileMap || []
-            : [];
+        const tileMap = Array.isArray(layer.tileMap) ? layer.tileMap : [];
         const cols = tileMap.reduce(
             (max, row) => Math.max(max, Array.isArray(row) ? row.length : 0),
             0
@@ -101,6 +107,89 @@ function loadMultiplayerLevel() {
         gemCells,
         animationClips
     };
+}
+
+function buildAutoCollisionZonesFromLayers(layers) {
+    const zones = [];
+    let index = 0;
+    for (const layer of layers) {
+        const tileMap = Array.isArray(layer.tileMap) ? layer.tileMap : [];
+        if (tileMap.length <= 0) {
+            continue;
+        }
+        if (!looksCollisionLayer(layer.name)) {
+            continue;
+        }
+
+        const tileWidth = Math.max(1, Number(layer.tileWidth || 16));
+        const tileHeight = Math.max(1, Number(layer.tileHeight || 16));
+        for (let row = 0; row < tileMap.length; row++) {
+            const rowData = Array.isArray(tileMap[row]) ? tileMap[row] : [];
+            let runStart = -1;
+            for (let col = 0; col <= rowData.length; col++) {
+                const tile = col < rowData.length ? Number(rowData[col]) : -1;
+                const solid = Number.isFinite(tile) && tile >= 0;
+                if (solid && runStart < 0) {
+                    runStart = col;
+                    continue;
+                }
+                if (!solid && runStart >= 0) {
+                    const runWidthTiles = col - runStart;
+                    if (runWidthTiles > 0) {
+                        zones.push({
+                            name: `auto_platform_${index++}`,
+                            type: 'platform',
+                            gameplayData: 'auto_from_tilemap',
+                            x: layer.x + runStart * tileWidth,
+                            y: layer.y + row * tileHeight,
+                            width: runWidthTiles * tileWidth,
+                            height: tileHeight
+                        });
+                    }
+                    runStart = -1;
+                }
+            }
+        }
+    }
+    return zones;
+}
+
+function mergeZones(manualZones, autoZones) {
+    const merged = [];
+    const seen = new Set();
+    const add = (zone) => {
+        const key = [
+            Math.round(Number(zone.x || 0) * 1000),
+            Math.round(Number(zone.y || 0) * 1000),
+            Math.round(Number(zone.width || 0) * 1000),
+            Math.round(Number(zone.height || 0) * 1000)
+        ].join('|');
+        if (seen.has(key)) {
+            return;
+        }
+        seen.add(key);
+        merged.push(zone);
+    };
+
+    for (const zone of manualZones) {
+        add(zone);
+    }
+    for (const zone of autoZones) {
+        add(zone);
+    }
+    return merged;
+}
+
+function looksCollisionLayer(layerName) {
+    const name = normalize(layerName);
+    if (!name) {
+        return false;
+    }
+    return name.includes('terrain') ||
+        name.includes('ground') ||
+        name.includes('platform') ||
+        name.includes('bloque') ||
+        name.includes('wall');
 }
 
 function loadJson(filePath) {

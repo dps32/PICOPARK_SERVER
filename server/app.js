@@ -77,13 +77,21 @@ ws.init(httpServer, port);
 
 ws.onConnection = (socket, id) => {
     if (debug) console.log("WebSocket client connected: " + id);
-    game.addClient(id);
+    const addedPlayer = game.addClient(id);
+    if (!addedPlayer) {
+      ws.send(socket, JSON.stringify({
+        type: 'room:error',
+        message: 'Room is full (max 8 players).'
+      }));
+      socket.close();
+      return;
+    }
     gameMessages.addClient(id);
-    queueSnapshotToClient(socket, id, game.getSnapshotState());
+    queueSnapshotToClient(socket, id, game.getSnapshotState(), true);
     queueGameplayStateToClient(socket, id, {
       includeOtherPlayers: true,
       includeGems: true
-    });
+    }, true);
 };
 
 ws.onMessage = (socket, id, msg) => {
@@ -127,8 +135,8 @@ function shutDown() {
 
 function broadcastGameState() {
   const snapshot = game.consumeSnapshotState();
-  const includeOtherPlayers = snapshot ? true : gameplayBroadcastIndex % 2 === 0;
-  const includeGems = snapshot ? true : !includeOtherPlayers;
+  const includeOtherPlayers = true;
+  const includeGems = true;
 
   if (snapshot) {
     ws.forEachClient((socket, id) => {
@@ -146,23 +154,23 @@ function broadcastGameState() {
   gameplayBroadcastIndex = (gameplayBroadcastIndex + 1) % 2;
 }
 
-function queueSnapshotToClient(socket, id, snapshot) {
-  gameMessages.enqueueReplaceable(
-    socket,
-    id,
-    'snapshot',
-    JSON.stringify({ type: 'snapshot', snapshot })
-  );
+function queueSnapshotToClient(socket, id, snapshot, reliable = false) {
+  const payload = JSON.stringify({ type: 'snapshot', snapshot });
+  if (reliable) {
+    gameMessages.enqueueReliable(socket, id, payload);
+    return;
+  }
+  gameMessages.enqueueReplaceable(socket, id, 'snapshot', payload);
 }
 
-function queueGameplayStateToClient(socket, id, options) {
+function queueGameplayStateToClient(socket, id, options, reliable = false) {
   const gameState = game.getGameplayStateForPlayer(id, options);
-  gameMessages.enqueueReplaceable(
-    socket,
-    id,
-    'gameplay',
-    JSON.stringify({ type: 'gameplay', gameState })
-  );
+  const payload = JSON.stringify({ type: 'gameplay', gameState });
+  if (reliable) {
+    gameMessages.enqueueReliable(socket, id, payload);
+    return;
+  }
+  gameMessages.enqueueReplaceable(socket, id, 'gameplay', payload);
 }
 
 function hasValidAdminSecret(req) {

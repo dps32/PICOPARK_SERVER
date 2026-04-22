@@ -3,6 +3,7 @@
 const { loadMultiplayerLevel } = require('./multiplayerLevelData.js');
 
 const MIN_PLAYERS_TO_START = 2;
+const MAX_PLAYERS = 8;
 // Safety fallback for dt calculation if the measured loop FPS is temporarily unavailable or zero.
 const TARGET_FPS_FALLBACK = 60;
 const PLAYER_WIDTH = 20;
@@ -27,6 +28,13 @@ const COLLISION_SWEEP_ITERATIONS = 12;
 const COLLISION_TIME_BACKOFF = 0.001;
 const COLLISION_PROBE_SPACING = 1.0;
 const MOVEMENT_EPSILON = 0.0001;
+const BLOCK_COLLISION_INSET_X = 1;
+const BLOCK_COLLISION_INSET_TOP = 0;
+const BLOCK_COLLISION_INSET_BOTTOM = 0;
+const PLAYER_COLLISION_ITERATIONS = 4;
+const PLAYER_SUPPORT_TOLERANCE = 3;
+const PLAYER_STACK_MAX_PENETRATION = 8;
+const PLAYER_HORIZONTAL_SPLIT_RATIO = 0.5;
 
 const DIRECTIONS = {
     left: { dx: -1, facing: 'left' },
@@ -88,10 +96,14 @@ class GameLogic {
             })
             .filter(Boolean);
 
-        this.wallZoneIndices = classifyZoneIndices(['wall', 'ground'], LEVEL.zones);
+        this.wallZoneIndices = classifyZoneIndices(['wall', 'ground', 'platform', 'bloque'], LEVEL.zones);
+        this.blockLikeZoneIndices = new Set(classifyZoneIndices(['ground', 'platform', 'bloque', 'block'], LEVEL.zones));
     }
 
     addClient(id) {
+        if (this.players.size >= MAX_PLAYERS) {
+            return null;
+        }
         const spawn = this.getSpawnPosition(this.players.size);
         const player = {
             id,
@@ -131,6 +143,10 @@ class GameLogic {
             this.resetMatch();
             this.nextJoinOrder = 0;
         }
+    }
+
+    getPlayerCount() {
+        return this.players.size;
     }
 
     handleMessage(id, msg) {
@@ -239,11 +255,17 @@ class GameLogic {
 
             const previousX = player.x;
             const previousY = player.y;
+            player.previousX = previousX;
+            player.previousY = previousY;
             const dx = player.velocityX * dtSeconds;
             const dy = player.velocityY * dtSeconds;
             this.movePlayerWithWallCollisions(player, previousX, previousY, dx, dy);
+        }
 
-            player.moving = hasInput && Math.abs(player.velocityX) > MOVEMENT_DIRECTION_THRESHOLD;
+        this.resolvePlayerCollisions();
+
+        for (const player of this.players.values()) {
+            player.moving = player.direction !== 'none' && Math.abs(player.velocityX) > MOVEMENT_DIRECTION_THRESHOLD;
             player.onGround = this.isPlayerOnGround(player);
 
             const isJumping = !player.onGround && player.velocityY < -50;
@@ -293,6 +315,7 @@ class GameLogic {
         const selfPlayer = this.players.get(playerId);
         const state = {
             ...this.getGameplayStateBase(players),
+            players: players.map((player) => this.serializeGameplayPlayer(player)),
             selfPlayer: selfPlayer ? this.serializeGameplayPlayer(selfPlayer) : null,
         };
 
@@ -458,7 +481,7 @@ class GameLogic {
         player.x = spawn.x;
         player.y = spawn.y;
         player.direction = 'none';
-        player.facing = 'down';
+        player.facing = 'right';
         player.moving = false;
         player.velocityX = 0;
         player.velocityY = 0;
@@ -469,6 +492,7 @@ class GameLogic {
         player.flipX = false;
         player.flipY = false;
         this.resolveWallPenetration(player);
+        player.onGround = this.isPlayerOnGround(player);
     }
 
     getSpawnPosition(index) {
@@ -603,7 +627,7 @@ class GameLogic {
             }
 
             const deltaX = this.zoneDeltaX(zoneIndex);
-            const deltaY = this.zoneDeltaY(zoneIndex);
+            const deltaY = 0;
             if (Math.abs(deltaX) <= MOVEMENT_EPSILON &&
                 Math.abs(deltaY) <= MOVEMENT_EPSILON) {
                 continue;
@@ -758,7 +782,17 @@ class GameLogic {
     zoneRectAtIndex(zoneIndex) {
         const zone = LEVEL.zones[zoneIndex];
         const runtime = this.zoneRuntimeStates[zoneIndex] || zone;
-        return rectAt(runtime.x, runtime.y, zone.width, zone.height);
+        const zoneRect = rectAt(runtime.x, runtime.y, zone.width, zone.height);
+        if (!this.blockLikeZoneIndices.has(zoneIndex)) {
+            return zoneRect;
+        }
+        return insetRect(
+            zoneRect,
+            BLOCK_COLLISION_INSET_X,
+            BLOCK_COLLISION_INSET_TOP,
+            BLOCK_COLLISION_INSET_X,
+            BLOCK_COLLISION_INSET_BOTTOM
+        );
     }
 
     zoneDeltaX(zoneIndex) {
@@ -799,12 +833,132 @@ class GameLogic {
         const playerRect = this.playerCollisionRect(player);
         for (const zoneIndex of this.wallZoneIndices) {
             const zoneRect = this.zoneRectAtIndex(zoneIndex);
-            if (playerRect.bottom >= zoneRect.top && playerRect.bottom <= zoneRect.top + 5 &&
+            if (playerRect.bottom >= zoneRect.top - PLAYER_SUPPORT_TOLERANCE &&
+                playerRect.bottom <= zoneRect.top + 5 &&
                 playerRect.right > zoneRect.left && playerRect.left < zoneRect.right) {
                 return true;
             }
         }
+        for (const other of this.players.values()) {
+            if (other.id === player.id) {
+                continue;
+            }
+            const otherRect = this.playerCollisionRect(other);
+            if (playerRect.bottom >= otherRect.top - PLAYER_SUPPORT_TOLERANCE &&
+                playerRect.bottom <= otherRect.top + PLAYER_SUPPORT_TOLERANCE &&
+                playerRect.right > otherRect.left &&
+                playerRect.left < otherRect.right) {
+                return true;
+            }
+        }
         return playerRect.bottom >= LEVEL.worldHeight - 1;
+    }
+
+    resolvePlayerCollisions() {
+        const players = Array.from(this.players.values());
+        if (players.length <= 1) {
+            return;
+        }
+
+        for (let iteration = 0; iteration < PLAYER_COLLISION_ITERATIONS; iteration++) {
+            let resolvedAny = false;
+            for (let i = 0; i < players.length; i++) {
+                for (let j = i + 1; j < players.length; j++) {
+                    const a = players[i];
+                    const b = players[j];
+                    if (this.resolvePlayerPairCollision(a, b)) {
+                        resolvedAny = true;
+                    }
+                }
+            }
+            if (!resolvedAny) {
+                break;
+            }
+        }
+    }
+
+    resolvePlayerPairCollision(a, b) {
+        const aRect = this.playerCollisionRect(a);
+        const bRect = this.playerCollisionRect(b);
+        if (!rectsOverlap(aRect, bRect)) {
+            return false;
+        }
+
+        const overlapLeft = aRect.right - bRect.left;
+        const overlapRight = bRect.right - aRect.left;
+        const overlapTop = aRect.bottom - bRect.top;
+        const overlapBottom = bRect.bottom - aRect.top;
+        const overlapX = Math.min(overlapLeft, overlapRight);
+        const overlapY = Math.min(overlapTop, overlapBottom);
+
+        if (overlapX <= MOVEMENT_EPSILON || overlapY <= MOVEMENT_EPSILON) {
+            return false;
+        }
+
+        const aPreviousBottom = (a.previousY ?? a.y) + a.height;
+        const bPreviousBottom = (b.previousY ?? b.y) + b.height;
+        const aFromAbove =
+            aPreviousBottom <= bRect.top + PLAYER_SUPPORT_TOLERANCE &&
+            a.velocityY >= b.velocityY;
+        const bFromAbove =
+            bPreviousBottom <= aRect.top + PLAYER_SUPPORT_TOLERANCE &&
+            b.velocityY >= a.velocityY;
+
+        if (aFromAbove && overlapY <= PLAYER_STACK_MAX_PENETRATION) {
+            a.y -= overlapY;
+            if (a.velocityY > b.velocityY) {
+                a.velocityY = b.velocityY;
+            }
+            this.resolveWallPenetration(a);
+            return true;
+        }
+        if (bFromAbove && overlapY <= PLAYER_STACK_MAX_PENETRATION) {
+            b.y -= overlapY;
+            if (b.velocityY > a.velocityY) {
+                b.velocityY = a.velocityY;
+            }
+            this.resolveWallPenetration(b);
+            return true;
+        }
+
+        if (overlapX < overlapY) {
+            const push = overlapX * PLAYER_HORIZONTAL_SPLIT_RATIO;
+            if (aRect.left < bRect.left) {
+                a.x -= push;
+                b.x += overlapX - push;
+            } else {
+                a.x += push;
+                b.x -= overlapX - push;
+            }
+            a.velocityX = 0;
+            b.velocityX = 0;
+        } else {
+            const push = overlapY * 0.5;
+            if (aRect.top < bRect.top) {
+                a.y -= push;
+                b.y += overlapY - push;
+            } else {
+                a.y += push;
+                b.y -= overlapY - push;
+            }
+            if (a.velocityY > 0) {
+                a.velocityY = 0;
+            }
+            if (b.velocityY > 0) {
+                b.velocityY = 0;
+            }
+        }
+
+        this.clampPlayerToWorld(a);
+        this.clampPlayerToWorld(b);
+        this.resolveWallPenetration(a);
+        this.resolveWallPenetration(b);
+        return true;
+    }
+
+    clampPlayerToWorld(player) {
+        player.x = clamp(player.x, 0, Math.max(0, LEVEL.worldWidth - player.width));
+        player.y = clamp(player.y, 0, Math.max(0, LEVEL.worldHeight - player.height));
     }
 
 }
@@ -1089,6 +1243,12 @@ function rectAt(x, y, width, height) {
         width,
         height
     };
+}
+
+function insetRect(rect, insetLeft, insetTop, insetRight, insetBottom) {
+    const width = Math.max(0, rect.width - insetLeft - insetRight);
+    const height = Math.max(0, rect.height - insetTop - insetBottom);
+    return rectAt(rect.left + insetLeft, rect.top + insetTop, width, height);
 }
 
 function rectsOverlap(a, b) {
