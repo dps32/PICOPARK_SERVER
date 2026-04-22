@@ -1,5 +1,5 @@
 {
-  "name": "Multiplayer game",
+  "name": "NetanFruits",
   "description": "Tileset: https://merchant-shade.itch.io/16x16-puny-world\nCharacter: https://erisesra.itch.io/character-templates-pack\nLevel 1: https://ansimuz.itch.io/sunny-land-pixel-game-art",
   "levels": [
     {
@@ -33,12 +33,27 @@
           "name": "Hero 0",
           "gameplayData": "",
           "type": "Hero 0",
-          "animationId": "anim_1772099194341380",
+          "animationId": "anim_1",
           "x": 32,
           "y": 32,
           "width": 20,
           "height": 20,
           "imageFile": "media/16x16 Idle-Sheet.png",
+          "flipX": false,
+          "flipY": false,
+          "depth": 0.0,
+          "groupId": "__main__"
+        },
+        {
+          "name": "door_sprite",
+          "gameplayData": "",
+          "type": "door_sprite",
+          "animationId": "anim_2",
+          "x": 178,
+          "y": 76,
+          "width": 27,
+          "height": 39,
+          "imageFile": "media/netandoor_2.png",
           "flipX": false,
           "flipY": false,
           "depth": 0.0,
@@ -75,15 +90,6 @@
   ],
   "mediaAssets": [
     {
-      "name": "Tileset",
-      "fileName": "media/punyworld-overworld-tileset.png",
-      "mediaType": "tileset",
-      "tileWidth": 16,
-      "tileHeight": 16,
-      "selectionColorHex": "#FF2D55",
-      "groupId": "__main__"
-    },
-    {
       "name": "sandia",
       "fileName": "media/sandia.png",
       "mediaType": "tileset",
@@ -93,47 +99,29 @@
       "groupId": "__main__"
     },
     {
-      "name": "sandia_suelo",
-      "fileName": "media/Proyecto nuevo.png",
-      "mediaType": "tileset",
-      "tileWidth": 50,
-      "tileHeight": 50,
+      "name": "netanfruits_2",
+      "fileName": "media/netanfruits_2.png",
+      "mediaType": "spritesheet",
+      "tileWidth": 32,
+      "tileHeight": 32,
       "selectionColorHex": "#FFCC00",
       "groupId": "__main__"
     },
     {
-      "name": "Character Idle",
-      "fileName": "media/16x16 Idle-Sheet.png",
+      "name": "netandoor_2",
+      "fileName": "media/netandoor_2.png",
       "mediaType": "spritesheet",
-      "tileWidth": 20,
-      "tileHeight": 20,
+      "tileWidth": 27,
+      "tileHeight": 39,
       "selectionColorHex": "#FFCC00",
       "groupId": "__main__"
     },
     {
-      "name": "Character Walk",
-      "fileName": "media/16x16 Walk-Sheet.png",
+      "name": "background_2",
+      "fileName": "media/background_2.png",
       "mediaType": "spritesheet",
-      "tileWidth": 20,
-      "tileHeight": 20,
-      "selectionColorHex": "#FFCC00",
-      "groupId": "__main__"
-    },
-    {
-      "name": "Smoke",
-      "fileName": "media/DragonDeath.png",
-      "mediaType": "spritesheet",
-      "tileWidth": 28,
-      "tileHeight": 26,
-      "selectionColorHex": "#FFCC00",
-      "groupId": "__main__"
-    },
-    {
-      "name": "Gem",
-      "fileName": "media/gem.png",
-      "mediaType": "spritesheet",
-      "tileWidth": 15,
-      "tileHeight": 15,
+      "tileWidth": 1774,
+      "tileHeight": 887,
       "selectionColorHex": "#FFCC00",
       "groupId": "__main__"
     }

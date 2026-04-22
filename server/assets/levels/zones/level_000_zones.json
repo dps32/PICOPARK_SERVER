@@ -28,6 +28,94 @@
       "height": 16,
       "color": "orange",
       "groupId": "__main__"
+    },
+    {
+      "name": "platform1",
+      "type": "platform",
+      "gameplayData": "",
+      "x": 256,
+      "y": 96,
+      "width": 48,
+      "height": 16,
+      "color": "orange",
+      "groupId": "__main__"
+    },
+    {
+      "name": "platform1",
+      "type": "platform",
+      "gameplayData": "",
+      "x": 320,
+      "y": 64,
+      "width": 16,
+      "height": 16,
+      "color": "orange",
+      "groupId": "__main__"
+    },
+    {
+      "name": "platform1",
+      "type": "platform",
+      "gameplayData": "",
+      "x": 368,
+      "y": 80,
+      "width": 48,
+      "height": 16,
+      "color": "orange",
+      "groupId": "__main__"
+    },
+    {
+      "name": "platform1",
+      "type": "platform",
+      "gameplayData": "",
+      "x": 480,
+      "y": 80,
+      "width": 48,
+      "height": 16,
+      "color": "orange",
+      "groupId": "__main__"
+    },
+    {
+      "name": "platform1",
+      "type": "platform",
+      "gameplayData": "",
+      "x": 480,
+      "y": 48,
+      "width": 48,
+      "height": 16,
+      "color": "orange",
+      "groupId": "__main__"
+    },
+    {
+      "name": "platform1",
+      "type": "platform",
+      "gameplayData": "",
+      "x": 512,
+      "y": 64,
+      "width": 16,
+      "height": 16,
+      "color": "orange",
+      "groupId": "__main__"
+    },
+    {
+      "name": "platform1",
+      "type": "platform",
+      "gameplayData": "",
+      "x": 352,
+      "y": 32,
+      "width": 16,
+      "height": 16,
+      "color": "orange",
+      "groupId": "__main__"
+    },
+    {
+      "name": "platform1",
+      "type": "platform",
+      "gameplayData": "",
+      "x": 176,
+      "y": 112,
+      "width": 16,
+      "height": 16,
+      "color": "orange",
+      "groupId": "__main__"
     }
   ]
 }
