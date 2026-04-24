@@ -124,6 +124,15 @@
       "tileHeight": 887,
       "selectionColorHex": "#FFCC00",
       "groupId": "__main__"
+    },
+    {
+      "name": "netankey",
+      "fileName": "media/netankey.png",
+      "mediaType": "spritesheet",
+      "tileWidth": 16,
+      "tileHeight": 16,
+      "selectionColorHex": "#FFCC00",
+      "groupId": "__main__"
     }
   ],
   "mediaGroups": [
