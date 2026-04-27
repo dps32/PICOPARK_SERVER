@@ -45,6 +45,10 @@ app.use((req, res, next) => {
 
 app.get('/favicon.ico', (req, res) => res.status(204).end());
 
+app.get('/qr', (req, res) => {
+  res.sendFile(path.resolve(publicDir, 'qr.html'));
+});
+
 app.post('/api/admin/restart-match', (req, res) => {
   if (!adminPassword) {
     return res.status(503).json({
@@ -231,3 +235,4 @@ function loadEnvFiles(filePaths) {
     }
   }
 }
+

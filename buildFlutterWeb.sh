@@ -26,6 +26,7 @@ fi
 mkdir -p "$PUBLIC_DIR"
 find "$PUBLIC_DIR" -mindepth 1 -maxdepth 1 \
   ! -name 'admin.html' \
+  ! -name 'qr.html' \
   ! -name 'keep' \
   -exec rm -rf {} +
 
