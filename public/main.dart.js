@@ -75213,13 +75213,13 @@ rP(a){var s,r,q,p,o,n
 for(s=this.ai0(a),r=s.length,q=this.r.a,p=this.d,o=0;o<s.length;s.length===r||(0,A.v)(s),++o){n=s[o]
 if(!q.n(0,n)){p.ag5(n,B.az)
 q.D(0,n)}}},
-ai0(a){var s,r="levels/media/background_2.png",q=A.c([],t.s),p=this.f.a,o=p.length
+ai0(a){var s,r="levels/media/background.png",q=A.c([],t.s),p=this.f.a,o=p.length
 if(a<o)for(p=p[a].a,o=p.length,s=0;s<p.length;p.length===o||(0,A.v)(p),++s)q.push("levels/"+p[s])
 if(!B.b.n(q,r))q.push(r)
 return q},
-Qy(a){var s=this.d.lv("levels/media/background_2.png",B.az),r=B.b.iu(a.z.a,new A.Z5(this))
+Qy(a){var s=this.d.lv("levels/media/background.png",B.az),r=B.b.iu(a.z.a,new A.Z5(this))
 return s||r},
-PW(a){var s,r,q,p,o,n=A.c(["levels/media/background_2.png"],t.s)
+PW(a){var s,r,q,p,o,n=A.c(["levels/media/background.png"],t.s)
 for(s=a.z.a,r=s.length,q=0;q<s.length;s.length===r||(0,A.v)(s),++q){p=s[q]
 if(p.b)n.push(p.f)}for(s=n.length,r=this.d.b,q=0;q<n.length;n.length===s||(0,A.v)(n),++q){o=n[q]
 if(r.ag(o))return o+": "+A.m(r.h(0,o))}return null},
@@ -76260,7 +76260,7 @@ for(s=a.Q.a,r=m.a,q=0;q<s.length;++q){p=s[q]
 o=B.c.aT(p.b+" "+p.a).toLowerCase()
 n=B.c.n(o,"hero")||B.c.n(o,"player")||B.c.n(o,"foxy")
 r.push(new A.JI(p.Q,0,0,p.d,p.e,!n,p.y,p.z,Math.max(1,B.d.aa(p.f)),Math.max(1,B.d.aa(p.r)),p.as))}return m},
-a7E(a){var s,r,q,p,o="levels/media/background_2.png",n=this.a.d
+a7E(a){var s,r,q,p,o="levels/media/background.png",n=this.a.d
 if(!n.lv(o,B.az))return
 s=n.t3(o,B.az)
 r=s.a.b

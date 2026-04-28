@@ -111,6 +111,7 @@ ws.onClose = (socket, id) => {
     game.removeClient(id);
     gameMessages.removeClient(id);
     ws.broadcast(JSON.stringify({ type: "disconnected", from: "server" }));
+    broadcastGameState();
 };
 
 // **Game Loop**

@@ -12,6 +12,7 @@ else
   exit 1
 fi
 PUBLIC_DIR="$SCRIPT_DIR/public"
+STATIC_PUBLIC_DIR="$SCRIPT_DIR/static_public"
 
 if ! command -v flutter >/dev/null 2>&1; then
   echo "Error: flutter no esta instal·lat o no és al PATH."
@@ -24,9 +25,9 @@ if [[ ! -d "$CLIENT_DIR" ]]; then
 fi
 
 mkdir -p "$PUBLIC_DIR"
+
 find "$PUBLIC_DIR" -mindepth 1 -maxdepth 1 \
   ! -name 'admin.html' \
-  ! -name 'qr.html' \
   ! -name 'keep' \
   -exec rm -rf {} +
 
@@ -47,4 +48,10 @@ else
   cd "$CLIENT_DIR"
   flutter pub get
   flutter build web --release --base-href / --output "$PUBLIC_DIR"
+fi
+
+if [[ -d "$STATIC_PUBLIC_DIR" ]]; then
+  cp -R "$STATIC_PUBLIC_DIR"/. "$PUBLIC_DIR"/
+else
+  echo "Avis: no s'ha trobat $STATIC_PUBLIC_DIR. No s'afegiran arxius estatics personalitzats."
 fi

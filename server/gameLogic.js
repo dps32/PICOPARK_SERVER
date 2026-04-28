@@ -4,7 +4,6 @@ const { loadMultiplayerLevel } = require('./multiplayerLevelData.js');
 
 const MIN_PLAYERS_TO_START = 2;
 const MAX_PLAYERS = 8;
-// Safety fallback for dt calculation if the measured loop FPS is temporarily unavailable or zero.
 const TARGET_FPS_FALLBACK = 60;
 const PLAYER_WIDTH = 20;
 const PLAYER_HEIGHT = 20;
@@ -14,6 +13,7 @@ const PLAYER_START_STEP_X = 32;
 const PLAYER_START_STEP_Y = 32;
 const GEM_WIDTH = 15;
 const GEM_HEIGHT = 15;
+const KEY_CARRY_OFFSET_Y = 6;
 
 const MOVE_SPEED_PER_SECOND = 135;
 const ACCELERATION_PER_SECOND = 1200;
@@ -35,6 +35,7 @@ const PLAYER_COLLISION_ITERATIONS = 4;
 const PLAYER_SUPPORT_TOLERANCE = 3;
 const PLAYER_STACK_MAX_PENETRATION = 8;
 const PLAYER_HORIZONTAL_SPLIT_RATIO = 0.5;
+const PLAYER_SUPPORT_MIN_OVERLAP = 4;
 
 const DIRECTIONS = {
     left: { dx: -1, facing: 'left' },
@@ -44,6 +45,7 @@ const DIRECTIONS = {
 
 const LEVEL = loadMultiplayerLevel();
 const PLAYER_TEMPLATE = findPlayerTemplate(LEVEL.sprites);
+const KEY_TEMPLATE = findKeyTemplate(LEVEL.sprites);
 
 class GameLogic {
     constructor() {
@@ -53,6 +55,10 @@ class GameLogic {
         this.phase = 'waiting';
         this.lobbyEndsAt = null;
         this.initialStateDirty = true;
+        this.keySpawnState = createKeySpawnState(KEY_TEMPLATE);
+        this.keyState = {
+            ...this.keySpawnState
+        };
 
         this.layerRuntimeStates = LEVEL.layers.map((layer) => ({
             x: layer.x,
@@ -138,6 +144,9 @@ class GameLogic {
 
     removeClient(id) {
         this.players.delete(id);
+        if (this.keyState.carrierId === id) {
+            this.resetKeyState();
+        }
         this.initialStateDirty = true;
         if (this.players.size <= 0) {
             this.resetMatch();
@@ -226,9 +235,12 @@ class GameLogic {
             return;
         }
 
+        this.syncKeyCarrierPosition();
+
         for (const player of this.players.values()) {
             this.applyMovingWallCarry(player);
             this.resolveWallPenetration(player);
+            const wasOnGround = this.isPlayerOnGround(player);
 
             const direction = DIRECTIONS[player.direction] || DIRECTIONS.none;
             const targetVelocityX = direction.dx * MOVE_SPEED_PER_SECOND;
@@ -242,7 +254,12 @@ class GameLogic {
                 player.velocityX = 0;
             }
 
-            player.velocityY = Math.min(player.velocityY + GRAVITY_PER_SECOND * dtSeconds, MAX_FALL_SPEED);
+            if (wasOnGround && player.velocityY > 0) {
+                player.velocityY = 0;
+            }
+            if (!wasOnGround || player.velocityY < 0) {
+                player.velocityY = Math.min(player.velocityY + GRAVITY_PER_SECOND * dtSeconds, MAX_FALL_SPEED);
+            }
 
             const movingLeft = player.velocityX < -MOVEMENT_DIRECTION_THRESHOLD;
             const movingRight = player.velocityX > MOVEMENT_DIRECTION_THRESHOLD;
@@ -263,10 +280,16 @@ class GameLogic {
         }
 
         this.resolvePlayerCollisions();
+        this.tryPickupKey();
+        this.syncKeyCarrierPosition();
 
         for (const player of this.players.values()) {
+            this.snapPlayerToSupport(player);
             player.moving = player.direction !== 'none' && Math.abs(player.velocityX) > MOVEMENT_DIRECTION_THRESHOLD;
             player.onGround = this.isPlayerOnGround(player);
+            if (player.onGround && player.velocityY > 0) {
+                player.velocityY = 0;
+            }
 
             const isJumping = !player.onGround && player.velocityY < -50;
             const isFalling = !player.onGround && player.velocityY > 50;
@@ -350,6 +373,7 @@ class GameLogic {
             remainingGems: 0,
             winnerId: '',
             winnerName: '',
+            key: this.serializeKeyState(),
             layerTransforms: this.layerRuntimeStates.map((layer, index) => ({
                 index,
                 x: round2(layer.x),
@@ -401,6 +425,8 @@ class GameLogic {
     }
 
     resetMatch() {
+        this.tickCounter = 0;
+        this.winnerId = '';
         this.phase = 'waiting';
         this.lobbyEndsAt = null;
         this.initialStateDirty = true;
@@ -421,6 +447,7 @@ class GameLogic {
             x: zone.x,
             y: zone.y
         }));
+        this.resetKeyState();
     }
 
     advanceEnvironment(dtSeconds) {
@@ -493,6 +520,61 @@ class GameLogic {
         player.flipY = false;
         this.resolveWallPenetration(player);
         player.onGround = this.isPlayerOnGround(player);
+    }
+
+    resetKeyState() {
+        this.keyState = {
+            ...this.keySpawnState
+        };
+    }
+
+    serializeKeyState() {
+        return {
+            picked: this.keyState.picked,
+            carrierId: this.keyState.carrierId,
+            x: round2(this.keyState.x),
+            y: round2(this.keyState.y),
+            width: round2(this.keyState.width),
+            height: round2(this.keyState.height)
+        };
+    }
+
+    tryPickupKey() {
+        if (!this.keyState.enabled || this.keyState.picked) {
+            return;
+        }
+
+        const keyRect = rectAt(
+            this.keyState.x,
+            this.keyState.y,
+            this.keyState.width,
+            this.keyState.height
+        );
+        for (const player of this.players.values()) {
+            const playerRect = this.playerCollisionRect(player);
+            if (!playerRect || !rectsOverlap(playerRect, keyRect)) {
+                continue;
+            }
+            this.keyState.picked = true;
+            this.keyState.carrierId = player.id;
+            this.syncKeyCarrierPosition();
+            return;
+        }
+    }
+
+    syncKeyCarrierPosition() {
+        if (!this.keyState.enabled || !this.keyState.picked) {
+            return;
+        }
+
+        const carrier = this.players.get(this.keyState.carrierId);
+        if (!carrier) {
+            this.resetKeyState();
+            return;
+        }
+
+        this.keyState.x = carrier.x + (carrier.width - this.keyState.width) * 0.5;
+        this.keyState.y = carrier.y - this.keyState.height - KEY_CARRY_OFFSET_Y;
     }
 
     getSpawnPosition(index) {
@@ -578,7 +660,10 @@ class GameLogic {
             }
 
             const zoneRect = this.zoneRectAtIndex(zoneIndex);
-            const playerRect = rectAt(player.x, player.y, player.width, player.height);
+            const playerRect = this.playerCollisionRect(player);
+            if (!playerRect) {
+                return;
+            }
 
             const penLeft = playerRect.right - zoneRect.left;
             const penRight = zoneRect.right - playerRect.left;
@@ -814,15 +899,18 @@ class GameLogic {
     }
 
     playerCollisionRect(player) {
-        const hitBoxes = this.playerHitBoxRectsAt(player, player.x, player.y);
-        return unionRects(hitBoxes, rectAt(player.x, player.y, player.width, player.height));
+        return this.playerCollisionRectAt(player, player.x, player.y);
+    }
+
+    playerCollisionRectAt(player, x, y) {
+        return unionRects(this.playerHitBoxRectsAt(player, x, y));
     }
 
     playerHitBoxRectsAt(player, x, y) {
         const clip = LEVEL.animationClips.get(player.animationId);
         const hitBoxes = activeHitBoxesForClip(clip, player.frameIndex);
         if (!hitBoxes || hitBoxes.length <= 0) {
-            return [rectAt(x, y, player.width, player.height)];
+            return [];
         }
         return hitBoxes.map((hitBox) =>
             hitBoxRectAt(x, y, player.width, player.height, hitBox, player.flipX, player.flipY)
@@ -830,28 +918,65 @@ class GameLogic {
     }
 
     isPlayerOnGround(player) {
+        return this.findPlayerSupport(player) != null;
+    }
+
+    findPlayerSupport(player) {
         const playerRect = this.playerCollisionRect(player);
+        if (!playerRect) {
+            return null;
+        }
+        let bestSupportTop = null;
+
         for (const zoneIndex of this.wallZoneIndices) {
             const zoneRect = this.zoneRectAtIndex(zoneIndex);
-            if (playerRect.bottom >= zoneRect.top - PLAYER_SUPPORT_TOLERANCE &&
-                playerRect.bottom <= zoneRect.top + 5 &&
-                playerRect.right > zoneRect.left && playerRect.left < zoneRect.right) {
-                return true;
+            if (!isStandingOnRect(playerRect, zoneRect, PLAYER_SUPPORT_TOLERANCE, PLAYER_SUPPORT_MIN_OVERLAP)) {
+                continue;
+            }
+            if (bestSupportTop == null || zoneRect.top < bestSupportTop) {
+                bestSupportTop = zoneRect.top;
             }
         }
+
         for (const other of this.players.values()) {
             if (other.id === player.id) {
                 continue;
             }
             const otherRect = this.playerCollisionRect(other);
-            if (playerRect.bottom >= otherRect.top - PLAYER_SUPPORT_TOLERANCE &&
-                playerRect.bottom <= otherRect.top + PLAYER_SUPPORT_TOLERANCE &&
-                playerRect.right > otherRect.left &&
-                playerRect.left < otherRect.right) {
-                return true;
+            if (!otherRect) {
+                continue;
+            }
+            if (!isStandingOnRect(playerRect, otherRect, PLAYER_SUPPORT_TOLERANCE, PLAYER_SUPPORT_MIN_OVERLAP)) {
+                continue;
+            }
+            if (bestSupportTop == null || otherRect.top < bestSupportTop) {
+                bestSupportTop = otherRect.top;
             }
         }
-        return playerRect.bottom >= LEVEL.worldHeight - 1;
+
+        const floorTop = LEVEL.worldHeight;
+        if (playerRect.bottom >= floorTop - 1) {
+            bestSupportTop = bestSupportTop == null ? floorTop : Math.min(bestSupportTop, floorTop);
+        }
+
+        return bestSupportTop == null ? null : { top: bestSupportTop };
+    }
+
+    snapPlayerToSupport(player) {
+        const support = this.findPlayerSupport(player);
+        if (!support) {
+            return false;
+        }
+        const physicsRect = this.playerCollisionRectAt(player, player.x, player.y);
+        if (!physicsRect) {
+            return false;
+        }
+        const targetY = support.top - physicsRect.height - (physicsRect.top - player.y);
+        if (Math.abs(player.y - targetY) <= PLAYER_SUPPORT_TOLERANCE) {
+            player.y = targetY;
+            return true;
+        }
+        return false;
     }
 
     resolvePlayerCollisions() {
@@ -880,7 +1005,7 @@ class GameLogic {
     resolvePlayerPairCollision(a, b) {
         const aRect = this.playerCollisionRect(a);
         const bRect = this.playerCollisionRect(b);
-        if (!rectsOverlap(aRect, bRect)) {
+        if (!aRect || !bRect || !rectsOverlap(aRect, bRect)) {
             return false;
         }
 
@@ -895,17 +1020,28 @@ class GameLogic {
             return false;
         }
 
-        const aPreviousBottom = (a.previousY ?? a.y) + a.height;
-        const bPreviousBottom = (b.previousY ?? b.y) + b.height;
+        const aPreviousRect = this.playerCollisionRectAt(a, a.previousX ?? a.x, a.previousY ?? a.y);
+        const bPreviousRect = this.playerCollisionRectAt(b, b.previousX ?? b.x, b.previousY ?? b.y);
+        if (!aPreviousRect || !bPreviousRect) {
+            return false;
+        }
+        const aPreviousBottom = aPreviousRect.bottom;
+        const bPreviousBottom = bPreviousRect.bottom;
         const aFromAbove =
             aPreviousBottom <= bRect.top + PLAYER_SUPPORT_TOLERANCE &&
+            overlapX >= PLAYER_SUPPORT_MIN_OVERLAP &&
             a.velocityY >= b.velocityY;
         const bFromAbove =
             bPreviousBottom <= aRect.top + PLAYER_SUPPORT_TOLERANCE &&
+            overlapX >= PLAYER_SUPPORT_MIN_OVERLAP &&
             b.velocityY >= a.velocityY;
 
         if (aFromAbove && overlapY <= PLAYER_STACK_MAX_PENETRATION) {
-            a.y -= overlapY;
+            const aPhysicsRect = this.playerCollisionRectAt(a, a.x, a.y);
+            if (!aPhysicsRect) {
+                return false;
+            }
+            a.y = bRect.top - aPhysicsRect.height - (aPhysicsRect.top - a.y);
             if (a.velocityY > b.velocityY) {
                 a.velocityY = b.velocityY;
             }
@@ -913,7 +1049,11 @@ class GameLogic {
             return true;
         }
         if (bFromAbove && overlapY <= PLAYER_STACK_MAX_PENETRATION) {
-            b.y -= overlapY;
+            const bPhysicsRect = this.playerCollisionRectAt(b, b.x, b.y);
+            if (!bPhysicsRect) {
+                return false;
+            }
+            b.y = aRect.top - bPhysicsRect.height - (bPhysicsRect.top - b.y);
             if (b.velocityY > a.velocityY) {
                 b.velocityY = a.velocityY;
             }
@@ -1111,6 +1251,30 @@ function findPlayerTemplate(sprites) {
     return sprites[0] || null;
 }
 
+function findKeyTemplate(sprites) {
+    for (const sprite of sprites) {
+        const type = normalize(sprite.type);
+        const name = normalize(sprite.name);
+        if (containsAny(type, ['key', 'llave', 'netankey']) ||
+            containsAny(name, ['key', 'llave', 'netankey'])) {
+            return sprite;
+        }
+    }
+    return null;
+}
+
+function createKeySpawnState(template) {
+    return {
+        enabled: !!template,
+        picked: false,
+        carrierId: '',
+        x: template ? Number(template.x || 0) : 0,
+        y: template ? Number(template.y || 0) : 0,
+        width: template ? Math.max(1, Number(template.width || 16)) : 16,
+        height: template ? Math.max(1, Number(template.height || 16)) : 16
+    };
+}
+
 function resolvePlayerAnimationId(facing, moving) {
     const animationName = resolvePlayerAnimationName(facing, moving);
     for (const clip of LEVEL.animationClips.values()) {
@@ -1196,9 +1360,9 @@ function hitBoxRectAt(x, y, width, height, hitBox, flipX, flipY) {
     );
 }
 
-function unionRects(rects, fallback) {
+function unionRects(rects) {
     if (!rects || rects.length <= 0) {
-        return fallback;
+        return null;
     }
     let minLeft = Number.POSITIVE_INFINITY;
     let minTop = Number.POSITIVE_INFINITY;
@@ -1212,7 +1376,7 @@ function unionRects(rects, fallback) {
     }
     if (!Number.isFinite(minLeft) || !Number.isFinite(minTop) ||
         !Number.isFinite(maxRight) || !Number.isFinite(maxBottom)) {
-        return fallback;
+        return null;
     }
     return rectAt(minLeft, minTop, maxRight - minLeft, maxBottom - minTop);
 }
@@ -1256,6 +1420,13 @@ function rectsOverlap(a, b) {
         a.right > b.left &&
         a.top < b.bottom &&
         a.bottom > b.top;
+}
+
+function isStandingOnRect(subjectRect, supportRect, tolerance, minOverlap) {
+    const overlap = Math.min(subjectRect.right, supportRect.right) - Math.max(subjectRect.left, supportRect.left);
+    return overlap >= minOverlap &&
+        subjectRect.bottom >= supportRect.top - tolerance &&
+        subjectRect.bottom <= supportRect.top + tolerance;
 }
 
 function approach(current, target, maxDelta) {

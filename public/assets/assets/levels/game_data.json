@@ -117,8 +117,8 @@
       "groupId": "__main__"
     },
     {
-      "name": "background_2",
-      "fileName": "media/background_2.png",
+      "name": "background",
+      "fileName": "media/background.png",
       "mediaType": "spritesheet",
       "tileWidth": 1774,
       "tileHeight": 887,
