@@ -1,0 +1,29 @@
+[
+  {
+    "_id": "record_001",
+    "nivell_id": "nivell_000",
+    "partida_id": "partida_001",
+    "jugador_id": "jugador_001",
+    "temps_segons": 184,
+    "posicio": 1,
+    "assolit_en": "2026-05-04T10:18:04.000Z"
+  },
+  {
+    "_id": "record_002",
+    "nivell_id": "nivell_000",
+    "partida_id": "partida_001",
+    "jugador_id": "jugador_002",
+    "temps_segons": 184,
+    "posicio": 2,
+    "assolit_en": "2026-05-04T10:18:04.000Z"
+  },
+  {
+    "_id": "record_003",
+    "nivell_id": "nivell_000",
+    "partida_id": "partida_002",
+    "jugador_id": "jugador_003",
+    "temps_segons": 221,
+    "posicio": 1,
+    "assolit_en": "2026-05-04T10:33:41.000Z"
+  }
+]
