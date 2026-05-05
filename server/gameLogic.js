@@ -35,6 +35,14 @@ const PLAYER_STACK_MAX_PENETRATION = 8;
 const PLAYER_HORIZONTAL_SPLIT_RATIO = 0.5;
 const PLAYER_SUPPORT_MIN_OVERLAP = 4;
 
+// duracion hardcodeada de las fases de la secuencia de victoria, en segundos
+const WIN_STAGE_OPENING_SECONDS = 0.85;
+// hacemos que la fase de walking dure mas que el fundido a negro del cliente
+// (2s) para que el player no se vea frenando antes de quedar oculto
+const WIN_STAGE_WALKING_SECONDS = 3.0;
+// durante la fase de walking el player camina mas tranquilo, a 1/3 del speed
+const WIN_WALK_SPEED_FACTOR = 1 / 3;
+
 const DIRECTIONS = {
     left: { dx: -1, facing: 'left' },
     right: { dx: 1, facing: 'right' },
@@ -130,6 +138,8 @@ class GameLogic {
             frameIndex: PLAYER_TEMPLATE ? resolveClipStartFrame(PLAYER_TEMPLATE.animationId) : 0,
             flipX: false,
             flipY: false,
+            winStage: 'none',
+            winStageStartTick: 0,
             lastActivityAt: Date.now()
         };
         this.players.set(id, player);
@@ -261,6 +271,7 @@ class GameLogic {
         }
 
         this.syncKeyCarrierPosition();
+        this.applyWinSequenceInputs();
 
         for (const player of this.players.values()) {
             this.applyMovingWallCarry(player);
@@ -268,7 +279,8 @@ class GameLogic {
             const wasOnGround = this.isPlayerOnGround(player);
 
             const direction = DIRECTIONS[player.direction] || DIRECTIONS.none;
-            const targetVelocityX = direction.dx * MOVE_SPEED_PER_SECOND;
+            const speedFactor = player.winStage === 'walking' ? WIN_WALK_SPEED_FACTOR : 1;
+            const targetVelocityX = direction.dx * MOVE_SPEED_PER_SECOND * speedFactor;
             const hasInput = player.direction !== 'none';
             const acceleration = ACCELERATION_PER_SECOND;
             const deceleration = DECELERATION_PER_SECOND;
@@ -306,8 +318,8 @@ class GameLogic {
 
         this.resolvePlayerCollisions();
         this.tryPickupKey();
-        this.tryOpenDoor();
-        this.tryWinByDoor();
+        this.tryEnterDoor();
+        this.advanceWinSequences(safeFps);
         this.syncKeyCarrierPosition();
         this.syncDoorAnimationFrame(safeFps);
 
@@ -429,7 +441,8 @@ class GameLogic {
             facing: player.facing,
             moving: player.moving,
             velocityY: round2(player.velocityY),
-            onGround: player.onGround
+            onGround: player.onGround,
+            winStage: player.winStage || 'none'
         };
     }
 
@@ -545,6 +558,8 @@ class GameLogic {
         player.direction = 'none';
         player.facing = 'right';
         player.moving = false;
+        player.winStage = 'none';
+        player.winStageStartTick = 0;
         player.velocityX = 0;
         player.velocityY = 0;
         player.score = 0;
@@ -617,13 +632,11 @@ class GameLogic {
         }
     }
 
-    tryOpenDoor() {
-        if (!this.doorState.enabled || this.doorState.opened || !this.keyState.picked) {
-            return;
-        }
-
-        const carrier = this.players.get(this.keyState.carrierId);
-        if (!carrier) {
+    // gestionamos los players que tocan la puerta. El portador la abre y se queda
+    // esperando la animacion (opening). Cualquier otro player que la toque cuando
+    // ya esta abierta entra directamente en walking. Cada player gana por separado.
+    tryEnterDoor() {
+        if (!this.doorState.enabled) {
             return;
         }
 
@@ -633,38 +646,87 @@ class GameLogic {
             this.doorState.width,
             this.doorState.height
         );
-        const carrierRect = this.playerCollisionRect(carrier);
-        if (!carrierRect || !rectsOverlap(carrierRect, doorRect)) {
-            return;
-        }
-
-        this.doorState.opened = true;
-        this.doorState.carrierId = carrier.id;
-        this.doorState.openedAtTick = this.tickCounter;
-        this.syncDoorAnimationFrame(Math.max(1, TARGET_FPS_FALLBACK));
-    }
-
-    // comprobamos si algun jugador está tocando la puerta para que sea ganador
-    tryWinByDoor() {
-        if (!this.doorState.enabled || !this.doorState.opened || this.phase !== 'playing') {
-            return;
-        }
 
         for (const player of this.players.values()) {
+            if (player.winStage !== 'none') {
+                continue;
+            }
             const playerRect = this.playerCollisionRect(player);
-            const doorRect = rectAt(
-                this.doorState.x,
-                this.doorState.y,
-                this.doorState.width,
-                this.doorState.height
-            );
             if (!playerRect || !rectsOverlap(playerRect, doorRect)) {
                 continue;
             }
-            this.phase = 'finished';
-            this.winnerId = player.id;
-            this.doorWonAtTick = this.tickCounter;
-            return;
+
+            if (this.doorState.opened) {
+                // puerta ya abierta: el player pasa directamente a caminar
+                player.winStage = 'walking';
+                player.winStageStartTick = this.tickCounter;
+                continue;
+            }
+
+            // si la puerta no esta abierta, solo el portador de la llave puede abrirla
+            if (this.keyState.picked && this.keyState.carrierId === player.id) {
+                this.doorState.opened = true;
+                this.doorState.carrierId = player.id;
+                this.doorState.openedAtTick = this.tickCounter;
+                this.syncDoorAnimationFrame(Math.max(1, TARGET_FPS_FALLBACK));
+                player.winStage = 'opening';
+                player.winStageStartTick = this.tickCounter;
+            }
+        }
+    }
+
+    // forzamos los inputs de los players que estan en la secuencia de victoria
+    // para que no se puedan controlar mientras dura la animacion
+    applyWinSequenceInputs() {
+        for (const player of this.players.values()) {
+            if (player.winStage === 'opening') {
+                player.direction = 'none';
+                player.velocityX = 0;
+            } else if (player.winStage === 'walking') {
+                player.direction = 'right';
+                player.facing = 'right';
+            }
+        }
+    }
+
+    // avanzamos las fases de la secuencia para cada player de forma individual.
+    // Cuando todos los players estan en 'won' marcamos la partida como finished
+    // para que aparezca el boton de restart globalmente.
+    advanceWinSequences(fps) {
+        const safeFps = Math.max(1, fps || TARGET_FPS_FALLBACK);
+        const openingTicks = Math.max(1, Math.round(WIN_STAGE_OPENING_SECONDS * safeFps));
+        const walkingTicks = Math.max(1, Math.round(WIN_STAGE_WALKING_SECONDS * safeFps));
+
+        for (const player of this.players.values()) {
+            if (player.winStage === 'opening') {
+                if (this.tickCounter - player.winStageStartTick >= openingTicks) {
+                    player.winStage = 'walking';
+                    player.winStageStartTick = this.tickCounter;
+                }
+            } else if (player.winStage === 'walking') {
+                if (this.tickCounter - player.winStageStartTick >= walkingTicks) {
+                    player.winStage = 'won';
+                    player.winStageStartTick = this.tickCounter;
+                    if (!this.winnerId) {
+                        this.winnerId = player.id;
+                        this.doorWonAtTick = this.tickCounter;
+                    }
+                }
+            }
+        }
+
+        // si todos los players activos han ganado pasamos la partida a finished
+        if (this.phase === 'playing' && this.players.size > 0) {
+            let allWon = true;
+            for (const player of this.players.values()) {
+                if (player.winStage !== 'won') {
+                    allWon = false;
+                    break;
+                }
+            }
+            if (allWon) {
+                this.phase = 'finished';
+            }
         }
     }
 
