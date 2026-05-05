@@ -25,6 +25,7 @@ const publicDir = path.resolve(__dirname, '..', 'public');
 const INACTIVITY_TIMEOUT_MS = 60_000;
 // How often to check for inactive players (ms)
 const INACTIVITY_CHECK_INTERVAL_MS = 10_000;
+const staticPublicDir = path.resolve(__dirname, '..', 'static_public');
 
 // Inicialitzar WebSockets i la lògica del joc
 const ws = new webSockets();
@@ -84,6 +85,10 @@ if (serveStatic) {
   app.get('/qr', (req, res) => {
     res.sendFile(path.resolve(publicDir, 'qr.html'));
   });
+
+app.get('/apk', (req, res) => {
+  res.sendFile(path.resolve(publicDir, 'netanfruits.apk'));
+});
 }
 
 app.post('/api/admin/restart-match', (req, res) => {

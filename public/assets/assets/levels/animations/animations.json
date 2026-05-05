@@ -13,7 +13,7 @@
       "mediaFile": "media/netanfruits_2.png",
       "startFrame": 0,
       "endFrame": 0,
-      "fps": 12,
+      "fps": 12.0,
       "loop": true,
       "groupId": "__main__",
       "anchorX": 0.5,
@@ -36,7 +36,7 @@
       "mediaFile": "media/netandoor_2.png",
       "startFrame": 0,
       "endFrame": 9,
-      "fps": 13,
+      "fps": 13.0,
       "loop": false,
       "groupId": "__main__",
       "anchorX": 0.5,
@@ -122,7 +122,7 @@
       "mediaFile": "media/netanfruits_2.png",
       "startFrame": 0,
       "endFrame": 2,
-      "fps": 6,
+      "fps": 6.0,
       "loop": true,
       "groupId": "__main__",
       "anchorX": 0.484375,
@@ -167,9 +167,9 @@
               "id": "__hb_1776784969978588_2",
               "name": "Hit Box 1",
               "color": "green",
-              "x": 0.15625,
+              "x": 0.1875,
               "y": 0.34375,
-              "width": 0.65625,
+              "width": 0.71875,
               "height": 0.65625
             }
           ]
@@ -185,9 +185,9 @@
               "name": "Hit Box 1",
               "color": "green",
               "x": 0.15625,
-              "y": 0.34375,
-              "width": 0.65625,
-              "height": 0.65625
+              "y": 0.375,
+              "width": 0.71875,
+              "height": 0.625
             }
           ]
         }
@@ -199,7 +199,7 @@
       "mediaFile": "media/netanfruits_2.png",
       "startFrame": 3,
       "endFrame": 5,
-      "fps": 6,
+      "fps": 6.0,
       "loop": true,
       "groupId": "__main__",
       "anchorX": 0.484375,
@@ -244,7 +244,7 @@
               "id": "__hb_1776785221716406_1",
               "name": "Hit Box 1",
               "color": "green",
-              "x": 0.15625,
+              "x": 0.1875,
               "y": 0.25,
               "width": 0.65625,
               "height": 0.75
@@ -276,7 +276,7 @@
       "mediaFile": "media/netanfruits_2.png",
       "startFrame": 6,
       "endFrame": 8,
-      "fps": 6,
+      "fps": 6.0,
       "loop": true,
       "groupId": "__main__",
       "anchorX": 0.53125,
@@ -323,7 +323,7 @@
               "color": "green",
               "x": 0.21875,
               "y": 0.25,
-              "width": 0.625,
+              "width": 0.6875,
               "height": 0.75
             }
           ]
@@ -338,9 +338,9 @@
               "id": "__hb_1776785232265548_2",
               "name": "Hit Box 1",
               "color": "green",
-              "x": 0.21875,
+              "x": 0.1875,
               "y": 0.25,
-              "width": 0.625,
+              "width": 0.6875,
               "height": 0.75
             }
           ]
@@ -353,7 +353,7 @@
       "mediaFile": "media/netanfruits_2.png",
       "startFrame": 9,
       "endFrame": 11,
-      "fps": 6,
+      "fps": 6.0,
       "loop": true,
       "groupId": "__main__",
       "anchorX": 0.515625,
@@ -398,7 +398,7 @@
               "id": "__hb_1776785248321550_2",
               "name": "Hit Box 1",
               "color": "green",
-              "x": 0.15625,
+              "x": 0.1875,
               "y": 0.3125,
               "width": 0.71875,
               "height": 0.6875
@@ -417,7 +417,7 @@
               "color": "green",
               "x": 0.15625,
               "y": 0.3125,
-              "width": 0.71875,
+              "width": 0.6875,
               "height": 0.6875
             }
           ]
@@ -430,7 +430,7 @@
       "mediaFile": "media/netanfruits_2.png",
       "startFrame": 12,
       "endFrame": 14,
-      "fps": 6,
+      "fps": 6.0,
       "loop": true,
       "groupId": "__main__",
       "anchorX": 0.515625,
@@ -475,9 +475,9 @@
               "id": "__hb_1776785320399230_1",
               "name": "Hit Box 1",
               "color": "green",
-              "x": 0.125,
+              "x": 0.15625,
               "y": 0.34375,
-              "width": 0.78125,
+              "width": 0.75,
               "height": 0.65625
             }
           ]
@@ -507,7 +507,7 @@
       "mediaFile": "media/netanfruits_2.png",
       "startFrame": 15,
       "endFrame": 17,
-      "fps": 6,
+      "fps": 6.0,
       "loop": true,
       "groupId": "__main__",
       "anchorX": 0.515625,
@@ -552,9 +552,9 @@
               "id": "__hb_1776785339132749_1",
               "name": "Hit Box 1",
               "color": "green",
-              "x": 0.125,
+              "x": 0.09375,
               "y": 0.34375,
-              "width": 0.78125,
+              "width": 0.84375,
               "height": 0.65625
             }
           ]
@@ -569,9 +569,9 @@
               "id": "__hb_1776785342198912_2",
               "name": "Hit Box 1",
               "color": "green",
-              "x": 0.125,
+              "x": 0.09375,
               "y": 0.34375,
-              "width": 0.78125,
+              "width": 0.8125,
               "height": 0.65625
             }
           ]
@@ -584,7 +584,7 @@
       "mediaFile": "media/netanfruits_2.png",
       "startFrame": 18,
       "endFrame": 20,
-      "fps": 6,
+      "fps": 6.0,
       "loop": true,
       "groupId": "__main__",
       "anchorX": 0.46875,
@@ -629,9 +629,9 @@
               "id": "__hb_1776785403786097_1",
               "name": "Hit Box 1",
               "color": "green",
-              "x": 0.125,
+              "x": 0.15625,
               "y": 0.1875,
-              "width": 0.6875,
+              "width": 0.71875,
               "height": 0.8125
             }
           ]
@@ -648,7 +648,7 @@
               "color": "green",
               "x": 0.125,
               "y": 0.1875,
-              "width": 0.6875,
+              "width": 0.71875,
               "height": 0.8125
             }
           ]
