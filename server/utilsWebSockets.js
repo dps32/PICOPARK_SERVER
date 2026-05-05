@@ -1,7 +1,7 @@
 // Description: WebSocket server for the app
 
 const WebSocket = require('ws')
-const { v4: uuidv4 } = require('uuid')
+const { randomUUID } = require('crypto')
 
 // How often to send a ping to detect dead connections (ms)
 const HEARTBEAT_INTERVAL_MS = 15000;
@@ -110,7 +110,7 @@ class Obj {
         console.log("Client connected");
 
         // Generar ID únic per al client
-        const id = "C" + uuidv4().substring(0, 5).toUpperCase();
+        const id = "C" + randomUUID().substring(0, 5).toUpperCase();
         const metadata = { id, isAlive: true, pongTimeoutTimer: null };
         this.socketsClients.set(con, metadata);
 
