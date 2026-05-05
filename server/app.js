@@ -16,6 +16,7 @@ const debug = process.env.DEBUG_WS === '1';
 const port = Number.parseInt(String(process.env.PORT || '3000').trim(), 10) || 3000;
 const adminPassword = String(process.env.WEB_ADMIN_PASSWORD || '').trim();
 const publicDir = path.resolve(__dirname, '..', 'public');
+const staticPublicDir = path.resolve(__dirname, '..', 'static_public');
 
 // Inicialitzar WebSockets i la lògica del joc
 const ws = new webSockets();
@@ -47,6 +48,10 @@ app.get('/favicon.ico', (req, res) => res.status(204).end());
 
 app.get('/qr', (req, res) => {
   res.sendFile(path.resolve(publicDir, 'qr.html'));
+});
+
+app.get('/apk', (req, res) => {
+  res.sendFile(path.resolve(publicDir, 'netanfruits.apk'));
 });
 
 app.post('/api/admin/restart-match', (req, res) => {

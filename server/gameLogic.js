@@ -11,8 +11,6 @@ const PLAYER_START_X = 32;
 const PLAYER_START_Y = 32;
 const PLAYER_START_STEP_X = 32;
 const PLAYER_START_STEP_Y = 32;
-const GEM_WIDTH = 15;
-const GEM_HEIGHT = 15;
 const KEY_CARRY_OFFSET_Y = 6;
 
 const MOVE_SPEED_PER_SECOND = 135;
@@ -46,6 +44,7 @@ const DIRECTIONS = {
 const LEVEL = loadMultiplayerLevel();
 const PLAYER_TEMPLATE = findPlayerTemplate(LEVEL.sprites);
 const KEY_TEMPLATE = findKeyTemplate(LEVEL.sprites);
+const DOOR_TEMPLATE = findDoorTemplate(LEVEL.sprites);
 
 class GameLogic {
     constructor() {
@@ -59,6 +58,8 @@ class GameLogic {
         this.keyState = {
             ...this.keySpawnState
         };
+        this.doorState = createDoorState(DOOR_TEMPLATE);
+        this.doorWonAtTick = -1;
 
         this.layerRuntimeStates = LEVEL.layers.map((layer) => ({
             x: layer.x,
@@ -281,7 +282,10 @@ class GameLogic {
 
         this.resolvePlayerCollisions();
         this.tryPickupKey();
+        this.tryOpenDoor();
+        this.tryWinByDoor();
         this.syncKeyCarrierPosition();
+        this.syncDoorAnimationFrame(safeFps);
 
         for (const player of this.players.values()) {
             this.snapPlayerToSupport(player);
@@ -374,6 +378,7 @@ class GameLogic {
             winnerId: '',
             winnerName: '',
             key: this.serializeKeyState(),
+            door: this.serializeDoorState(),
             layerTransforms: this.layerRuntimeStates.map((layer, index) => ({
                 index,
                 x: round2(layer.x),
@@ -448,6 +453,8 @@ class GameLogic {
             y: zone.y
         }));
         this.resetKeyState();
+        this.resetDoorState();
+        this.doorWonAtTick = -1;
     }
 
     advanceEnvironment(dtSeconds) {
@@ -539,6 +546,26 @@ class GameLogic {
         };
     }
 
+    resetDoorState() {
+        this.doorState = createDoorState(DOOR_TEMPLATE);
+    }
+
+    serializeDoorState() {
+        return {
+            enabled: this.doorState.enabled,
+            opened: this.doorState.opened,
+            carrierId: this.doorState.carrierId,
+            spriteIndex: this.doorState.spriteIndex,
+            animationId: this.doorState.animationId,
+            openedAtTick: this.doorState.openedAtTick,
+            frameIndex: this.doorState.frameIndex,
+            x: round2(this.doorState.x),
+            y: round2(this.doorState.y),
+            width: round2(this.doorState.width),
+            height: round2(this.doorState.height)
+        };
+    }
+
     tryPickupKey() {
         if (!this.keyState.enabled || this.keyState.picked) {
             return;
@@ -560,6 +587,72 @@ class GameLogic {
             this.syncKeyCarrierPosition();
             return;
         }
+    }
+
+    tryOpenDoor() {
+        if (!this.doorState.enabled || this.doorState.opened || !this.keyState.picked) {
+            return;
+        }
+
+        const carrier = this.players.get(this.keyState.carrierId);
+        if (!carrier) {
+            return;
+        }
+
+        const doorRect = rectAt(
+            this.doorState.x,
+            this.doorState.y,
+            this.doorState.width,
+            this.doorState.height
+        );
+        const carrierRect = this.playerCollisionRect(carrier);
+        if (!carrierRect || !rectsOverlap(carrierRect, doorRect)) {
+            return;
+        }
+
+        this.doorState.opened = true;
+        this.doorState.carrierId = carrier.id;
+        this.doorState.openedAtTick = this.tickCounter;
+        this.syncDoorAnimationFrame(Math.max(1, TARGET_FPS_FALLBACK));
+    }
+
+    // comprobamos si algun jugador está tocando la puerta para que sea ganador
+    tryWinByDoor() {
+        if (!this.doorState.enabled || !this.doorState.opened || this.phase !== 'playing') {
+            return;
+        }
+
+        for (const player of this.players.values()) {
+            const playerRect = this.playerCollisionRect(player);
+            const doorRect = rectAt(
+                this.doorState.x,
+                this.doorState.y,
+                this.doorState.width,
+                this.doorState.height
+            );
+            if (!playerRect || !rectsOverlap(playerRect, doorRect)) {
+                continue;
+            }
+            this.phase = 'finished';
+            this.winnerId = player.id;
+            this.doorWonAtTick = this.tickCounter;
+            return;
+        }
+    }
+
+    syncDoorAnimationFrame(fps) {
+        if (!this.doorState.enabled) {
+            return;
+        }
+
+        if (!this.doorState.opened) {
+            this.doorState.frameIndex = resolveClipStartFrame(this.doorState.animationId);
+            return;
+        }
+
+        const safeFps = Math.max(1, fps || TARGET_FPS_FALLBACK);
+        const elapsedSeconds = Math.max(0, (this.tickCounter - this.doorState.openedAtTick) / safeFps);
+        this.doorState.frameIndex = resolveAnimationFrame(this.doorState.animationId, elapsedSeconds);
     }
 
     syncKeyCarrierPosition() {
@@ -859,6 +952,19 @@ class GameLogic {
                 if (rectsOverlap(hitBoxRect, zoneRect)) {
                     return true;
                 }
+            }
+        }
+        if (!this.doorState.enabled || this.doorState.opened) {
+            return false;
+        }
+        // si el player lleva la llave, la puerta no bloquea para que pueda entrar y abrirla
+        if (this.keyState.picked && this.keyState.carrierId === player.id) {
+            return false;
+        }
+        const doorRect = rectAt(this.doorState.x, this.doorState.y, this.doorState.width, this.doorState.height);
+        for (const hitBoxRect of this.playerHitBoxRectsAt(player, x, y)) {
+            if (rectsOverlap(hitBoxRect, doorRect)) {
+                return true;
             }
         }
         return false;
@@ -1263,6 +1369,22 @@ function findKeyTemplate(sprites) {
     return null;
 }
 
+function findDoorTemplate(sprites) {
+    for (let index = 0; index < sprites.length; index++) {
+        const sprite = sprites[index];
+        const type = normalize(sprite.type);
+        const name = normalize(sprite.name);
+        if (containsAny(type, ['door', 'netandoor']) ||
+            containsAny(name, ['door', 'netandoor'])) {
+            return {
+                sprite,
+                index
+            };
+        }
+    }
+    return null;
+}
+
 function createKeySpawnState(template) {
     return {
         enabled: !!template,
@@ -1272,6 +1394,23 @@ function createKeySpawnState(template) {
         y: template ? Number(template.y || 0) : 0,
         width: template ? Math.max(1, Number(template.width || 16)) : 16,
         height: template ? Math.max(1, Number(template.height || 16)) : 16
+    };
+}
+
+function createDoorState(template) {
+    const sprite = template ? template.sprite : null;
+    return {
+        enabled: !!sprite,
+        opened: false,
+        carrierId: '',
+        spriteIndex: template ? template.index : -1,
+        animationId: sprite ? String(sprite.animationId || '') : '',
+        openedAtTick: 0,
+        frameIndex: sprite ? resolveClipStartFrame(sprite.animationId) : 0,
+        x: sprite ? Number(sprite.x || 0) : 0,
+        y: sprite ? Number(sprite.y || 0) : 0,
+        width: sprite ? Math.max(1, Number(sprite.width || 27)) : 27,
+        height: sprite ? Math.max(1, Number(sprite.height || 39)) : 39
     };
 }
 

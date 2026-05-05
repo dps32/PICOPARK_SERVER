@@ -116,6 +116,17 @@
       "height": 16,
       "color": "orange",
       "groupId": "__main__"
+    },
+    {
+      "name": "Zone 11",
+      "type": "platform",
+      "gameplayData": "",
+      "x": 529,
+      "y": 18,
+      "width": 47,
+      "height": 110,
+      "color": "orange",
+      "groupId": "__main__"
     }
   ]
 }

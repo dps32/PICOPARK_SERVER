@@ -8,6 +8,7 @@ const RESOURCES = {"assets/AssetManifest.bin": "58cc511174662a75b9e070f92910094d
 "assets/assets/levels/animations/animations.json": "5ca7090bffffd142fd3a17d8a9817fea",
 "assets/assets/levels/game_data.json": "2ff00e98fc9ac18033c79bde8bbfca7f",
 "assets/assets/levels/media/background.png": "a2fdc2957b78f06b504791ebc1dbb1d9",
+"assets/assets/levels/media/background_2.png": "a2fdc2957b78f06b504791ebc1dbb1d9",
 "assets/assets/levels/media/netandoor_2.png": "fd46b04fb906006e1f515019435dbd82",
 "assets/assets/levels/media/netanfruits_2.png": "d2076ba8999cabefbecebdafbaa5f346",
 "assets/assets/levels/media/sandia.png": "1677b5e95b8aa6afe02c1076203d17e6",
