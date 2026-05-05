@@ -7,6 +7,9 @@ const GameLogic = require('./gameLogic.js');
 const webSockets = require('./utilsWebSockets.js');
 const GameMessages = require('./utilsGameMessages.js');
 const GameLoop = require('./utilsGameLoop.js');
+const InactivityMonitor = require('./inactivityMonitor.js');
+const mongodbRoutes = require('./mongodbRoutes.js');
+const { getMongoState } = require('./mongodbClient.js');
 
 loadEnvFiles([
   path.resolve(__dirname, 'config.env')
@@ -15,7 +18,13 @@ loadEnvFiles([
 const debug = process.env.DEBUG_WS === '1';
 const port = Number.parseInt(String(process.env.PORT || '3000').trim(), 10) || 3000;
 const adminPassword = String(process.env.WEB_ADMIN_PASSWORD || '').trim();
+const serveStatic = process.env.SERVE_STATIC === '1';
 const publicDir = path.resolve(__dirname, '..', 'public');
+
+// Inactivity kick: players idle for more than this are forcibly disconnected (ms)
+const INACTIVITY_TIMEOUT_MS = 60_000;
+// How often to check for inactive players (ms)
+const INACTIVITY_CHECK_INTERVAL_MS = 10_000;
 const staticPublicDir = path.resolve(__dirname, '..', 'static_public');
 
 // Inicialitzar WebSockets i la lògica del joc
@@ -25,16 +34,29 @@ const gameMessages = new GameMessages(ws);
 let gameLoop = new GameLoop();
 let gameplayBroadcastIndex = 0;
 
+const inactivityMonitor = new InactivityMonitor({
+    inactivityTimeoutMs: INACTIVITY_TIMEOUT_MS,
+    checkIntervalMs: INACTIVITY_CHECK_INTERVAL_MS,
+    getInactive: (timeoutMs) => game.getInactivePlayers(timeoutMs),
+    onKick: (id) => {
+        // Close with code 4001 so the client knows this is a kick, not a
+        // network error, and suppresses auto-reconnect.
+        ws.closeClientWithCode(id, 4001, 'kicked:inactivity');
+    }
+});
+
 // Inicialitzar servidor Express
 const app = express();
-app.use(express.static(publicDir, {
-  maxAge: 0,
-  setHeaders: (res) => {
-    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-    res.setHeader('Pragma', 'no-cache');
-    res.setHeader('Expires', '0');
-  }
-}));
+if (serveStatic) {
+  app.use(express.static(publicDir, {
+    maxAge: 0,
+    setHeaders: (res) => {
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+    }
+  }));
+}
 app.use(express.json());
 app.use((req, res, next) => {
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
@@ -44,15 +66,30 @@ app.use((req, res, next) => {
   next();
 });
 
+app.use('/api', mongodbRoutes);
+
 app.get('/favicon.ico', (req, res) => res.status(204).end());
 
-app.get('/qr', (req, res) => {
-  res.sendFile(path.resolve(publicDir, 'qr.html'));
+app.get('/health', (_req, res) => {
+  const mongo = getMongoState();
+  res.json({
+    ok: true,
+    status: 'up',
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString(),
+    mongo
+  });
 });
+
+if (serveStatic) {
+  app.get('/qr', (req, res) => {
+    res.sendFile(path.resolve(publicDir, 'qr.html'));
+  });
 
 app.get('/apk', (req, res) => {
   res.sendFile(path.resolve(publicDir, 'netanfruits.apk'));
 });
+}
 
 app.post('/api/admin/restart-match', (req, res) => {
   if (!adminPassword) {
@@ -115,8 +152,21 @@ ws.onClose = (socket, id) => {
     if (debug) console.log("WebSocket client disconnected: " + id);
     game.removeClient(id);
     gameMessages.removeClient(id);
-    ws.broadcast(JSON.stringify({ type: "disconnected", from: "server" }));
-    broadcastGameState();
+
+    // Force a reliable snapshot to every remaining client so they immediately
+    // remove the disconnected player. Using reliable (not replaceable) prevents
+    // the message from being dropped if a replaceable snapshot is already queued,
+    // and flushAll sends it right away without waiting for the next game loop tick.
+    const snapshot = game.getSnapshotState();
+    game.clearSnapshotDirty();
+    ws.forEachClient((clientSocket, clientId) => {
+        queueSnapshotToClient(clientSocket, clientId, snapshot, true);
+        queueGameplayStateToClient(clientSocket, clientId, {
+            includeOtherPlayers: true,
+            includeGems: true
+        }, true);
+    });
+    gameMessages.flushAll();
 };
 
 // **Game Loop**
@@ -126,6 +176,7 @@ gameLoop.run = (fps) => {
     gameMessages.flushAll();
 };
 gameLoop.start();
+inactivityMonitor.start();
 
 // Gestionar el tancament del servidor
 let shuttingDown = false;
@@ -136,6 +187,7 @@ function shutDown() {
   if (shuttingDown) return;
   shuttingDown = true;
   console.log('Rebuda senyal de tancament, aturant el servidor...');
+  inactivityMonitor.stop();
   httpServer.close(() => {
     ws.end();
     gameLoop.stop();

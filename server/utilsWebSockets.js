@@ -3,6 +3,11 @@
 const WebSocket = require('ws')
 const { v4: uuidv4 } = require('uuid')
 
+// How often to send a ping to detect dead connections (ms)
+const HEARTBEAT_INTERVAL_MS = 15000;
+// How long to wait for a pong before terminating (ms)
+const HEARTBEAT_TIMEOUT_MS = 10000;
+
 class Obj {
 
     init(httpServer, port) {
@@ -19,9 +24,18 @@ class Obj {
 
         // What to do when a websocket client connects
         this.ws.on('connection', (ws) => { this.newConnection(ws) })
+
+        // Periodic ping to detect and terminate dead connections
+        this._heartbeatTimer = setInterval(() => {
+            this._runHeartbeat();
+        }, HEARTBEAT_INTERVAL_MS);
     }
 
     end() {
+        if (this._heartbeatTimer) {
+            clearInterval(this._heartbeatTimer);
+            this._heartbeatTimer = null;
+        }
         this.ws.close()
     }
 
@@ -54,49 +68,133 @@ class Obj {
         return this.getBufferedAmount(socket) > Math.max(0, threshold)
     }
 
+    sendToClientById(id, msg) {
+        for (const [socket, metadata] of this.socketsClients.entries()) {
+            if (metadata.id === id) {
+                this.send(socket, msg);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // Close a client cleanly with a WebSocket close code the client can inspect.
+    // Code 4000-4999 are reserved for application use by the WS spec.
+    closeClientWithCode(id, code, reason) {
+        for (const [socket, metadata] of this.socketsClients.entries()) {
+            if (metadata.id === id) {
+                console.log(`Closing client ${id} with code ${code} (${reason})`);
+                if (socket.readyState === WebSocket.OPEN) {
+                    socket.close(code, reason);
+                }
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // Force-terminate a client socket by ID (for heartbeat timeouts etc.)
+    terminateClient(id) {
+        for (const [socket, metadata] of this.socketsClients.entries()) {
+            if (metadata.id === id) {
+                console.log(`Terminating client ${id} (forced)`);
+                socket.terminate();
+                return true;
+            }
+        }
+        return false;
+    }
+
     // A websocket client connects
     newConnection(con) {
         console.log("Client connected");
-    
+
         // Generar ID únic per al client
         const id = "C" + uuidv4().substring(0, 5).toUpperCase();
-        const metadata = { id };
+        const metadata = { id, isAlive: true, pongTimeoutTimer: null };
         this.socketsClients.set(con, metadata);
-    
+
+        // Mark alive on pong response
+        con.on('pong', () => {
+            const meta = this.socketsClients.get(con);
+            if (meta) {
+                meta.isAlive = true;
+                if (meta.pongTimeoutTimer) {
+                    clearTimeout(meta.pongTimeoutTimer);
+                    meta.pongTimeoutTimer = null;
+                }
+            }
+        });
+
         // Enviar missatge de benvinguda amb ID únic
         con.send(JSON.stringify({
             type: "welcome",
             id: id,
             message: "Welcome to the server"
         }));
-    
+
         // Informar tots els clients de la nova connexió
         this.broadcast(JSON.stringify({
             type: "newClient",
             id: id
         }));
-    
+
         if (this.onConnection && typeof this.onConnection === "function") {
             this.onConnection(con, id);
         }
-    
+
         con.on("close", () => {
+            const meta = this.socketsClients.get(con);
+            if (meta && meta.pongTimeoutTimer) {
+                clearTimeout(meta.pongTimeoutTimer);
+            }
             this.closeConnection(con);
             this.socketsClients.delete(con);
         });
-    
-        con.on('message', (bufferedMessage) => { 
+
+        con.on('message', (bufferedMessage) => {
             this.newMessage(con, id, bufferedMessage);
         });
     }
 
     closeConnection(con) {
         if (this.onClose && typeof this.onClose === "function") {
-            var id = this.socketsClients.get(con).id
-            this.onClose(con, id)
+            const meta = this.socketsClients.get(con);
+            if (!meta) return;
+            this.onClose(con, meta.id)
         }
     }
 
+    // Ping all clients; terminate those that didn't respond to the previous ping
+    _runHeartbeat() {
+        this.socketsClients.forEach((metadata, socket) => {
+            if (socket.readyState !== WebSocket.OPEN) {
+                return;
+            }
+
+            if (!metadata.isAlive) {
+                // Did not respond to last ping — terminate
+                console.log(`Heartbeat timeout for client ${metadata.id}, terminating`);
+                socket.terminate();
+                return;
+            }
+
+            metadata.isAlive = false;
+            socket.ping();
+
+            // Safety: if pong never arrives, terminate after timeout
+            if (metadata.pongTimeoutTimer) {
+                clearTimeout(metadata.pongTimeoutTimer);
+            }
+            metadata.pongTimeoutTimer = setTimeout(() => {
+                if (!metadata.isAlive && socket.readyState === WebSocket.OPEN) {
+                    console.log(`Pong timeout for client ${metadata.id}, terminating`);
+                    socket.terminate();
+                }
+                metadata.pongTimeoutTimer = null;
+            }, HEARTBEAT_TIMEOUT_MS);
+        });
+    }
 
     // Send a message to all websocket clients
     broadcast(msg) {

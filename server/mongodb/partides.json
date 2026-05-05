@@ -1,0 +1,28 @@
+[
+  {
+    "_id": "partida_001",
+    "nivell_id": "nivell_000",
+    "data_inici": "2026-05-04T10:15:00.000Z",
+    "data_fi": "2026-05-04T10:18:04.000Z",
+    "durada_segons": 184,
+    "estat": "finalitzada",
+    "jugadors_totals": 2,
+    "jugador_ids": [
+      "jugador_001",
+      "jugador_002"
+    ]
+  },
+  {
+    "_id": "partida_002",
+    "nivell_id": "nivell_000",
+    "data_inici": "2026-05-04T10:30:00.000Z",
+    "data_fi": "2026-05-04T10:33:41.000Z",
+    "durada_segons": 221,
+    "estat": "finalitzada",
+    "jugadors_totals": 2,
+    "jugador_ids": [
+      "jugador_002",
+      "jugador_003"
+    ]
+  }
+]

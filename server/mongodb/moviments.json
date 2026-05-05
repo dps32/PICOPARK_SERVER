@@ -1,0 +1,52 @@
+[
+  {
+    "_id": 1,
+    "partida_id": "partida_001",
+    "jugador_id": "jugador_001",
+    "data": "2026-05-04T10:15:08.000Z",
+    "tipus_moviment": "moure",
+    "direccio": "dreta",
+    "posicio_x": 84.5,
+    "posicio_y": 132.0
+  },
+  {
+    "_id": 2,
+    "partida_id": "partida_001",
+    "jugador_id": "jugador_002",
+    "data": "2026-05-04T10:15:11.000Z",
+    "tipus_moviment": "salt",
+    "direccio": "amunt",
+    "posicio_x": 116.0,
+    "posicio_y": 130.0
+  },
+  {
+    "_id": 3,
+    "partida_id": "partida_001",
+    "jugador_id": "jugador_001",
+    "data": "2026-05-04T10:16:02.000Z",
+    "tipus_moviment": "agafar_clau",
+    "direccio": "none",
+    "posicio_x": 180.0,
+    "posicio_y": 120.0
+  },
+  {
+    "_id": 4,
+    "partida_id": "partida_002",
+    "jugador_id": "jugador_002",
+    "data": "2026-05-04T10:30:07.000Z",
+    "tipus_moviment": "moure",
+    "direccio": "esquerra",
+    "posicio_x": 70.0,
+    "posicio_y": 134.0
+  },
+  {
+    "_id": 5,
+    "partida_id": "partida_002",
+    "jugador_id": "jugador_003",
+    "data": "2026-05-04T10:31:19.000Z",
+    "tipus_moviment": "obrir_porta",
+    "direccio": "none",
+    "posicio_x": 241.0,
+    "posicio_y": 109.0
+  }
+]

@@ -129,7 +129,8 @@ class GameLogic {
             animationId: PLAYER_TEMPLATE ? PLAYER_TEMPLATE.animationId : '',
             frameIndex: PLAYER_TEMPLATE ? resolveClipStartFrame(PLAYER_TEMPLATE.animationId) : 0,
             flipX: false,
-            flipY: false
+            flipY: false,
+            lastActivityAt: Date.now()
         };
         this.players.set(id, player);
         this.initialStateDirty = true;
@@ -159,6 +160,24 @@ class GameLogic {
         return this.players.size;
     }
 
+    touchActivity(id) {
+        const player = this.players.get(id);
+        if (player) {
+            player.lastActivityAt = Date.now();
+        }
+    }
+
+    getInactivePlayers(timeoutMs) {
+        const now = Date.now();
+        const inactive = [];
+        for (const player of this.players.values()) {
+            if (now - player.lastActivityAt > timeoutMs) {
+                inactive.push(player.id);
+            }
+        }
+        return inactive;
+    }
+
     handleMessage(id, msg) {
         try {
             const obj = JSON.parse(msg);
@@ -171,7 +190,12 @@ class GameLogic {
                 return false;
             }
 
+            player.lastActivityAt = Date.now();
+
             switch (obj.type) {
+            case 'ping':
+                // Client heartbeat — activity already stamped above, no state change needed
+                return false;
             case 'register':
                 {
                     const nextName = sanitizePlayerName(obj.playerName, player.name);
@@ -309,6 +333,10 @@ class GameLogic {
         }
         this.initialStateDirty = false;
         return this.getSnapshotState();
+    }
+
+    clearSnapshotDirty() {
+        this.initialStateDirty = false;
     }
 
     getSnapshotState() {

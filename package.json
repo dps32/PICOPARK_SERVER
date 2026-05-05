@@ -4,11 +4,14 @@
     "main": "./server/app.js",
     "scripts": {
         "dev": "node --watch --watch-path ./server ./server/app.js",
-        "pm2start": "pm2 start ./server/app.js",
-        "pm2list": "pm2 list",
-        "pm2stop": "pm2 delete app",
-        "pm2logs": "pm2 logs",
-        "sync-assets": "bash ./getAssets.sh"
+        "mongo:seed": "node ./server/scripts/seedMongoFromJson.js",
+        "pm2:start": "pm2 start ecosystem.config.cjs --only picopark-server",
+        "pm2:prod": "pm2 start ecosystem.config.cjs --only picopark-server --env production --update-env",
+        "pm2:restart": "pm2 restart picopark-server --update-env",
+        "pm2:stop": "pm2 stop picopark-server",
+        "pm2:delete": "pm2 delete picopark-server",
+        "pm2:logs": "pm2 logs picopark-server",
+        "pm2:list": "pm2 list"
     },
     "keywords": [],
     "author": "",
@@ -16,7 +19,8 @@
     "description": "",
     "dependencies": {
         "express": "^4.22.1",
-        "uuid": "^11.1.0",
+        "mongodb": "^7.2.0",
+        "uuid": "^14.0.0",
         "ws": "^8.18.1"
     }
 }

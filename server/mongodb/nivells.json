@@ -1,0 +1,14 @@
+[
+  {
+    "_id": "nivell_000",
+    "nom": "All together now",
+    "descripcio": "Nivell base extret del fitxer actual del servidor.",
+    "estat": "actiu",
+    "origen": {
+      "game_data": "server/assets/levels/game_data.json",
+      "zones": "server/assets/levels/zones/level_000_zones.json",
+      "paths": "server/assets/levels/paths/level_000_paths.json"
+    },
+    "created_at": "2026-05-04T00:00:00.000Z"
+  }
+]
